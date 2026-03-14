@@ -5227,10 +5227,41 @@ The fractal maps to sound:
           csdScoreNotes = [];
           csdStartTime = Date.now();
 
-          const header = `; Dr.C - Mandelbrot Explorer - Live Recording
+          // Get current synthesis settings
+          const synthType = document.getElementById("synthType").value;
+          const synthNames = {
+            pluck: "Pluck (Karplus-Strong)",
+            fm: "FM Bell",
+            additive: "Additive Bell",
+            waveshape: "Soft Waveshaping",
+            organ: "Organ (Hammond-style)",
+            granular: "Granular Synthesis",
+            noise: "Filtered Noise",
+            subtractive: "Subtractive (Moog Filter)",
+            mallet: "FM Mallet (Marimba/Vibraphone)",
+            waveguide: "Waveguide (Plucked String)",
+            supersaw: "Supersaw (Detuned Saws)",
+          };
+
+          // Get effect settings
+          const reverbMix = parseFloat(
+            document.getElementById("reverbMix").value,
+          );
+          const echoMix = parseFloat(document.getElementById("echoMix").value);
+          const chorusMix = parseFloat(
+            document.getElementById("chorusMix").value,
+          );
+          const flangerMix = parseFloat(
+            document.getElementById("flangerMix").value,
+          );
+
+          const header =
+            `; Dr.C - Mandelbrot Explorer - Live Recording
 ; Mode: ${config.mode.toUpperCase()}
 ; Center: ${config.centerX.toFixed(4)} + ${config.centerY.toFixed(4)}i
 ; Zoom: ${config.zoom.toFixed(2)}x
+; Synthesis: ${synthNames[synthType] || synthType}
+; Reverb Mix: ${reverbMix}% | Echo Mix: ${echoMix}% | Chorus Mix: ${chorusMix}% | Flanger Mix: ${flangerMix}%
 ; Started: ${new Date().toISOString()}
 
 <CsoundSynthesizer>
@@ -5244,45 +5275,96 @@ ksmps = 32
 nchnls = 2
 0dbfs = 1
 
+; Global audio buses
 gaReverb init 0
+gaEcho init 0
+gaChorus init 0
+gaFlanger init 0
 
-instr 1
-  ; p4 = frequency (Hz)
-  ; p5 = amplitude
-  ; p6 = pan (0-1)
-  ; p7 = brightness (0-1)
+; === COMPLETE INSTRUMENT SET (11 synthesis engines) ===` +
+            getFullOrchestra() +
+            `
 
-  iFreq = p4
-  iAmp = p5
-  iPan = p6
-  iBright = p7
+; === GLOBAL EFFECTS (4 effect processors) ===
 
-  kEnv = linsegr:k(0, 0.01, 1, 0.1, 0.8, 0.05, 0)
-
-  iHarms = 1 + iBright * 8
-  aSig = gbuzz:a(iAmp * kEnv, iFreq, iHarms, 1, 0.9, -1)
-
-  kCutoff = iFreq * (2 + iBright * 4)
-  aSig = moogladder:a(aSig, kCutoff, 0.3)
-
-  aL = aSig * sqrt(1 - iPan)
-  aR = aSig * sqrt(iPan)
-
-  gaReverb = gaReverb + (aL + aR) * 0.5 * 0.3
-
-  out(aL * 0.7, aR * 0.7)
+; Instrument 998: Echo
+instr 998
+  kEchoTime chnget "echoTime"
+  kEchoFeedback chnget "echoFeedback"
+  kEchoMix chnget "echoMix"
+  
+  kTime = limit:k(kEchoTime, 0.01, 2.0)
+  kFb = limit:k(kEchoFeedback, 0, 0.9)
+  kMix = limit:k(kEchoMix, 0, 1)
+  
+  aDelayed = vdelay:a(gaEcho, kTime * 1000, 2000)
+  
+  aDry = gaEcho
+  aWet = aDelayed
+  gaReverb = gaReverb + (aDry * (1 - kMix) + aWet * kMix * kFb) * 0.5
+  
+  clear gaEcho
 endin
 
+; Instrument 997: Chorus
+instr 997
+  kChorusRate chnget "chorusRate"
+  kChorusDepth chnget "chorusDepth"
+  kChorusMix chnget "chorusMix"
+  
+  kRate = limit:k(kChorusRate, 0.1, 10)
+  kDepth = limit:k(kChorusDepth, 0, 20)
+  kMix = limit:k(kChorusMix, 0, 1)
+  
+  kLFO1 = oscili:k(kDepth, kRate)
+  kLFO2 = oscili:k(kDepth, kRate * 1.3, 0.33)
+  kLFO3 = oscili:k(kDepth, kRate * 0.7, 0.67)
+  
+  aD1 = vdelay:a(gaChorus, 15 + kLFO1, 50)
+  aD2 = vdelay:a(gaChorus, 20 + kLFO2, 50)
+  aD3 = vdelay:a(gaChorus, 25 + kLFO3, 50)
+  
+  aDry = gaChorus
+  aWet = (aD1 + aD2 + aD3) * 0.33
+  gaReverb = gaReverb + (aDry * (1 - kMix) + aWet * kMix) * 0.5
+  
+  clear gaChorus
+endin
+
+; Instrument 996: Flanger
+instr 996
+  kFlangerRate chnget "flangerRate"
+  kFlangerDepth chnget "flangerDepth"
+  kFlangerFeedback chnget "flangerFeedback"
+  kFlangerMix chnget "flangerMix"
+  
+  kRate = limit:k(kFlangerRate, 0.1, 10)
+  kDepth = limit:k(kFlangerDepth, 0, 10)
+  kFb = limit:k(kFlangerFeedback, -0.9, 0.9)
+  kMix = limit:k(kFlangerMix, 0, 1)
+  
+  kLFO = oscili:k(kDepth, kRate)
+  aDelayed = vdelay:a(gaFlanger, 3 + kLFO, 20)
+  
+  aDry = gaFlanger
+  aWet = gaFlanger + aDelayed * kFb
+  gaReverb = gaReverb + (aDry * (1 - kMix) + aWet * kMix) * 0.5
+  
+  clear gaFlanger
+endin
+
+; Instrument 999: Reverb
 instr 999
-  aL, aR freeverb gaReverb, gaReverb, 0.85, 0.7
-  out(aL * 0.7, aR * 0.7)
-  gaReverb = 0
+  kMasterVol chnget "masterVol"
+  aL, aR = freeverb(gaReverb, gaReverb, 0.85, 0.7)
+  out(aL * kMasterVol, aR * kMasterVol)
+  clear gaReverb
 endin
 
 </CsInstruments>
 <CsScore>
 
-f1 0 16384 10 1
+f1 0 16384 10 1  ; Sine wave for oscillators
 
 ; --- SCORE EVENTS (recording in progress...) ---
 `;
@@ -5299,6 +5381,368 @@ f1 0 16384 10 1
           btn.textContent = "🔴 Start CSD Recording";
         }
       };
+
+      // Helper function to return the complete orchestra (all 11 instruments)
+      function getFullOrchestra() {
+        return `
+
+; Instrument 1: Pluck (Karplus-Strong)
+instr 1
+  iFreq = p4
+  iAmp = p5
+  iPan = p6
+  iBright = p7
+  iAtk = p8 / 1000
+  iRel = p9 / 1000
+  iDecay = p10
+  iDetune = p11
+
+  kMasterVol chnget "masterVol"
+  kReverbMix chnget "reverbMix"
+
+  kEnv = linsegr:k(0, iAtk, iAmp, iRel, 0)
+  iPluckDecay = 0.5 + iDecay * 2
+  aSig = pluck:a(kEnv, iFreq * (1 + iDetune * 0.02), iFreq, 0, 1, iPluckDecay)
+
+  kCutoff = 500 + iBright * 3000
+  aSig = tone(aSig, kCutoff)
+
+  aL, aR = pan2(aSig, iPan)
+  aMono = (aL + aR) * 0.5
+  gaReverb = gaReverb + aMono * kReverbMix
+  gaEcho = gaEcho + aMono
+  gaChorus = gaChorus + aMono
+  gaFlanger = gaFlanger + aMono
+  out(aL * kMasterVol, aR * kMasterVol)
+endin
+
+; Instrument 2: FM Bell
+instr 2
+  iFreq = p4
+  iAmp = p5
+  iPan = p6
+  iBright = p7
+  iAtk = p8 / 1000
+  iRel = p9 / 1000
+  iModRatio = p10
+  iTexture = p11
+
+  kMasterVol chnget "masterVol"
+  kReverbMix chnget "reverbMix"
+
+  kEnv = linsegr:k(0, iAtk, iAmp, iRel, 0)
+  kModIdx = (2 + iBright * 4) * (1 + iTexture * 3)
+  kCarRatio = 1 + iModRatio * 2
+  aSig = foscili:a(kEnv, iFreq, kCarRatio, 2.5, kModIdx, -1)
+
+  aL, aR = pan2(aSig, iPan)
+  aMono = (aL + aR) * 0.5
+  gaReverb = gaReverb + aMono * kReverbMix
+  gaEcho = gaEcho + aMono
+  gaChorus = gaChorus + aMono
+  gaFlanger = gaFlanger + aMono
+  out(aL * kMasterVol, aR * kMasterVol)
+endin
+
+; Instrument 3: Additive Bell
+instr 3
+  iFreq = p4
+  iAmp = p5
+  iPan = p6
+  iBright = p7
+  iAtk = p8 / 1000
+  iRel = p9 / 1000
+  iInharm = p10
+  iSpectralTilt = p11
+
+  kMasterVol chnget "masterVol"
+  kReverbMix chnget "reverbMix"
+
+  kEnv = linsegr:k(0, iAtk, iAmp, iRel, 0)
+  iStretch = 1 + iInharm * 0.3
+  a1 = oscili:a(kEnv, iFreq, -1)
+  a2 = oscili:a(kEnv * 0.5, iFreq * 2.76 * iStretch, -1)
+  a3 = oscili:a(kEnv * 0.3 * iBright * iSpectralTilt, iFreq * 5.4 * iStretch * iStretch, -1)
+  a4 = oscili:a(kEnv * 0.2 * iBright * iSpectralTilt * iSpectralTilt, iFreq * 8.93 * iStretch * iStretch * iStretch, -1)
+  aSig = (a1 + a2 + a3 + a4) * 0.4
+
+  aL, aR = pan2(aSig, iPan)
+  aMono = (aL + aR) * 0.5
+  gaReverb = gaReverb + aMono * kReverbMix
+  gaEcho = gaEcho + aMono
+  gaChorus = gaChorus + aMono
+  gaFlanger = gaFlanger + aMono
+  out(aL * kMasterVol, aR * kMasterVol)
+endin
+
+; Instrument 4: Soft Waveshaping
+instr 4
+  iFreq = p4
+  iAmp = p5
+  iPan = p6
+  iBright = p7
+  iAtk = p8 / 1000
+  iRel = p9 / 1000
+  iShape = p10
+  iOddEven = p11
+
+  kMasterVol chnget "masterVol"
+  kReverbMix chnget "reverbMix"
+
+  kEnv = linsegr:k(0, iAtk, iAmp, iRel, 0)
+  
+  aSine = oscili:a(1, iFreq, -1)
+  kDrive = 1 + iShape * 4
+  aShaped = tanh(aSine * kDrive) / kDrive
+  
+  aOdd = oscili:a(0.3 * iBright * (1 - iOddEven * 0.5), iFreq * 3, -1)
+  aEven = oscili:a(0.2 * iBright * iOddEven, iFreq * 2, -1)
+  
+  aSig = (aShaped + aOdd + aEven) * kEnv * 0.5
+
+  aL, aR = pan2(aSig, iPan)
+  aMono = (aL + aR) * 0.5
+  gaReverb = gaReverb + aMono * kReverbMix
+  gaEcho = gaEcho + aMono
+  gaChorus = gaChorus + aMono
+  gaFlanger = gaFlanger + aMono
+  out(aL * kMasterVol, aR * kMasterVol)
+endin
+
+; Instrument 5: Organ (Hammond-style)
+instr 5
+  iFreq = p4
+  iAmp = p5
+  iPan = p6
+  iBright = p7
+  iAtk = p8 / 1000
+  iRel = p9 / 1000
+  iDrawbar = p10
+  iChorus = p11
+
+  kMasterVol chnget "masterVol"
+  kReverbMix chnget "reverbMix"
+
+  kEnv = linsegr:k(0, iAtk, iAmp, iRel, 0)
+
+  a1 = oscili:a(kEnv * 0.25 * iDrawbar, iFreq * 0.5, -1)
+  a2 = oscili:a(kEnv * 0.3, iFreq, -1)
+  a3 = oscili:a(kEnv * 0.3, iFreq * 2, -1)
+  a4 = oscili:a(kEnv * 0.2 * iBright, iFreq * 3, -1)
+  a5 = oscili:a(kEnv * 0.15 * iBright, iFreq * 4, -1)
+  a6 = oscili:a(kEnv * 0.1 * iBright * (1 - iDrawbar), iFreq * 5, -1)
+  a7 = oscili:a(kEnv * 0.08 * iBright, iFreq * 6, -1)
+  a8 = oscili:a(kEnv * 0.06 * iBright, iFreq * 8, -1)
+  aSig = (a1 + a2 + a3 + a4 + a5 + a6 + a7 + a8) * 0.25
+
+  kChorusRate = 0.5 + iChorus * 3
+  kChorusDepth = iChorus * 0.005
+  aDel = vdelay:a(aSig, (20 + kChorusDepth * 1000) * oscili:k(1, kChorusRate, -1), 50)
+  aSig = aSig + aDel * 0.3
+
+  aL, aR = pan2(aSig, iPan)
+  aMono = (aL + aR) * 0.5
+  gaReverb = gaReverb + aMono * kReverbMix
+  gaEcho = gaEcho + aMono
+  gaChorus = gaChorus + aMono
+  gaFlanger = gaFlanger + aMono
+  out(aL * kMasterVol, aR * kMasterVol)
+endin
+
+; Instrument 6: Granular
+instr 6
+  iFreq = p4
+  iAmp = p5
+  iPan = p6
+  iBright = p7
+  iAtk = p8 / 1000
+  iRel = p9 / 1000
+  iGrainDens = p10
+  iSpread = p11
+
+  kMasterVol chnget "masterVol"
+  kReverbMix chnget "reverbMix"
+
+  kEnv = linsegr:k(0, iAtk, iAmp, iRel, 0)
+
+  kGrainRate = 20 + (iBright * 50) + (iGrainDens * 50)
+  aGrainEnv = oscil:a(1, kGrainRate, -1)
+  aGrainEnv = abs(aGrainEnv)
+
+  kPitchJitter = iBright * 0.1 + iSpread * 0.2
+  aSig = oscili:a(kEnv * aGrainEnv, iFreq * (1 + randc:k(kPitchJitter, kGrainRate)), -1)
+  aSig = aSig * 0.3
+
+  aL, aR = pan2(aSig, iPan)
+  aMono = (aL + aR) * 0.5
+  gaReverb = gaReverb + aMono * kReverbMix
+  gaEcho = gaEcho + aMono
+  gaChorus = gaChorus + aMono
+  gaFlanger = gaFlanger + aMono
+  out(aL * kMasterVol, aR * kMasterVol)
+endin
+
+; Instrument 7: Filtered Noise
+instr 7
+  iFreq = p4
+  iAmp = p5
+  iPan = p6
+  iBright = p7
+  iAtk = p8 / 1000
+  iRel = p9 / 1000
+  iFilterQ = p10
+  iBandwidth = p11
+
+  kMasterVol chnget "masterVol"
+  kReverbMix chnget "reverbMix"
+
+  kEnv = linsegr:k(0, iAtk, iAmp, iRel, 0)
+  aSig = noise:a(kEnv * 2, 0)
+  kCf = iFreq * (1 + iBright * 2)
+  kBw = kCf * (0.05 + iBandwidth * 0.3) * (2 - iFilterQ)
+  aSig = butterbp(aSig, kCf, kBw)
+
+  aL, aR = pan2(aSig, iPan)
+  aMono = (aL + aR) * 0.5
+  gaReverb = gaReverb + aMono * kReverbMix
+  gaEcho = gaEcho + aMono
+  gaChorus = gaChorus + aMono
+  gaFlanger = gaFlanger + aMono
+  out(aL * kMasterVol, aR * kMasterVol)
+endin
+
+; Instrument 8: Subtractive (Moog Filter)
+instr 8
+  iFreq = p4
+  iAmp = p5
+  iPan = p6
+  iBright = p7
+  iAtk = p8 / 1000
+  iRel = p9 / 1000
+  iResonance = p10
+  iWaveform = p11
+
+  kMasterVol chnget "masterVol"
+  kReverbMix chnget "reverbMix"
+
+  kEnv = linsegr:k(0, iAtk, iAmp, iRel, 0)
+  iWave = int(iWaveform * 2.9)
+  aSig = vco2:a(kEnv, iFreq, iWave)
+  kCutoff = iFreq * (2 + iBright * 4)
+  kRes = 0.1 + iResonance * 0.85
+  aSig = moogladder:a(aSig, kCutoff, kRes)
+
+  aL, aR = pan2(aSig, iPan)
+  aMono = (aL + aR) * 0.5
+  gaReverb = gaReverb + aMono * kReverbMix
+  gaEcho = gaEcho + aMono
+  gaChorus = gaChorus + aMono
+  gaFlanger = gaFlanger + aMono
+  out(aL * kMasterVol, aR * kMasterVol)
+endin
+
+; Instrument 9: FM Mallet (Marimba/Vibraphone)
+instr 9
+  iFreq = p4
+  iAmp = p5
+  iPan = p6
+  iBright = p7
+  iAtk = p8 / 1000
+  iRel = p9 / 1000
+  iMalletHard = p10
+  iResonance = p11
+
+  kMasterVol chnget "masterVol"
+  kReverbMix chnget "reverbMix"
+
+  kEnv = expsegr:k(iAmp, iAtk, iAmp, iRel * (1 + iResonance * 3), 0.001, 0.1, 0.001)
+  
+  kModIdx = 2 + iMalletHard * 6 + iBright * 3
+  aSig = foscili:a(kEnv, iFreq * 0.5, 1, 3.5, kModIdx, -1)
+  
+  a2 = oscili:a(kEnv * 0.3, iFreq * 3.87, -1)
+  aSig = aSig + a2
+
+  aL, aR = pan2(aSig, iPan)
+  aMono = (aL + aR) * 0.5
+  gaReverb = gaReverb + aMono * kReverbMix
+  gaEcho = gaEcho + aMono
+  gaChorus = gaChorus + aMono
+  gaFlanger = gaFlanger + aMono
+  out(aL * kMasterVol, aR * kMasterVol)
+endin
+
+; Instrument 10: Waveguide (Plucked String)
+instr 10
+  iFreq = p4
+  iAmp = p5
+  iPan = p6
+  iBright = p7
+  iAtk = p8 / 1000
+  iRel = p9 / 1000
+  iPluckPos = p10
+  iStiffness = p11
+
+  kMasterVol chnget "masterVol"
+  kReverbMix chnget "reverbMix"
+
+  kEnv = linsegr:k(0, iAtk, iAmp, iRel, 0)
+  
+  iPluck = 0.1 + iPluckPos * 0.4
+  aSig = wgpluck2:a(0.98, kEnv * 0.3, iFreq, iPluck, 0.1)
+  
+  kCutoff = iFreq * (3 + iBright * 5)
+  kQ = 0.5 + iStiffness * 3
+  aSig = resonr(aSig, kCutoff, kQ)
+  aSig = aSig * 0.3
+
+  aL, aR = pan2(aSig, iPan)
+  aMono = (aL + aR) * 0.5
+  gaReverb = gaReverb + aMono * kReverbMix
+  gaEcho = gaEcho + aMono
+  gaChorus = gaChorus + aMono
+  gaFlanger = gaFlanger + aMono
+  out(aL * kMasterVol, aR * kMasterVol)
+endin
+
+; Instrument 11: Supersaw (Detuned Saws)
+instr 11
+  iFreq = p4
+  iAmp = p5
+  iPan = p6
+  iBright = p7
+  iAtk = p8 / 1000
+  iRel = p9 / 1000
+  iDetune = p10
+  iVoices = p11
+
+  kMasterVol chnget "masterVol"
+  kReverbMix chnget "reverbMix"
+
+  kEnv = linsegr:k(0, iAtk, iAmp, iRel, 0)
+  
+  iDet = 0.001 + iDetune * 0.02
+  a1 = vco2:a(kEnv, iFreq, 0)
+  a2 = vco2:a(kEnv, iFreq * (1 + iDet), 0)
+  a3 = vco2:a(kEnv, iFreq * (1 - iDet), 0)
+  a4 = vco2:a(kEnv * iVoices, iFreq * (1 + iDet * 2), 0)
+  a5 = vco2:a(kEnv * iVoices, iFreq * (1 - iDet * 2), 0)
+  aSig = (a1 + a2 + a3 + a4 + a5) * 0.2
+  
+  kCutoff = iFreq * (1 + iBright * 6)
+  kRes = 0.3 + iBright * 0.6
+  aSig = moogladder:a(aSig, kCutoff, kRes)
+
+  aL, aR = pan2(aSig, iPan)
+  aMono = (aL + aR) * 0.5
+  gaReverb = gaReverb + aMono * kReverbMix
+  gaEcho = gaEcho + aMono
+  gaChorus = gaChorus + aMono
+  gaFlanger = gaFlanger + aMono
+  out(aL * kMasterVol, aR * kMasterVol)
+endin
+`;
+      }
 
       // Function to add a note to the live CSD recording
       function addNoteToCSD(time, duration, freq, amp, pan, brightness) {
@@ -5325,15 +5769,68 @@ f1 0 16384 10 1
         const elapsedSeconds = (Date.now() - csdStartTime) / 1000;
         const reverbDuration = Math.max(5, elapsedSeconds + 5);
 
+        // Get effect settings for control channel initialization
+        const masterVol =
+          parseFloat(document.getElementById("masterVol").value) / 100;
+        const reverbMix =
+          parseFloat(document.getElementById("reverbMix").value) / 100;
+        const echoTime = parseFloat(document.getElementById("echoTime").value);
+        const echoFeedback =
+          parseFloat(document.getElementById("echoFeedback").value) / 100;
+        const echoMix =
+          parseFloat(document.getElementById("echoMix").value) / 100;
+        const chorusRate = parseFloat(
+          document.getElementById("chorusRate").value,
+        );
+        const chorusDepth = parseFloat(
+          document.getElementById("chorusDepth").value,
+        );
+        const chorusMix =
+          parseFloat(document.getElementById("chorusMix").value) / 100;
+        const flangerRate = parseFloat(
+          document.getElementById("flangerRate").value,
+        );
+        const flangerDepth = parseFloat(
+          document.getElementById("flangerDepth").value,
+        );
+        const flangerFeedback =
+          parseFloat(document.getElementById("flangerFeedback").value) / 100;
+        const flangerMix =
+          parseFloat(document.getElementById("flangerMix").value) / 100;
+
         const footer = `
 ; --- END OF SCORE ---
 
-e
+; Start global effect processors
+i 998 0 ${reverbDuration.toFixed(1)}  ; Echo
+i 997 0 ${reverbDuration.toFixed(1)}  ; Chorus
+i 996 0 ${reverbDuration.toFixed(1)}  ; Flanger
+i 999 0 ${reverbDuration.toFixed(1)}  ; Reverb (always last)
 
-i 999 0 ${reverbDuration.toFixed(1)}
+e
 
 </CsScore>
 </CsoundSynthesizer>
+
+; === PLAYBACK INSTRUCTIONS ===
+; 1. Save this file as "fractal.csd"
+; 2. Set control channel values before running:
+;    chnset ${masterVol.toFixed(2)}, "masterVol"
+;    chnset ${reverbMix.toFixed(2)}, "reverbMix"
+;    chnset ${echoTime.toFixed(2)}, "echoTime"
+;    chnset ${echoFeedback.toFixed(2)}, "echoFeedback"
+;    chnset ${echoMix.toFixed(2)}, "echoMix"
+;    chnset ${chorusRate.toFixed(2)}, "chorusRate"
+;    chnset ${chorusDepth.toFixed(2)}, "chorusDepth"
+;    chnset ${chorusMix.toFixed(2)}, "chorusMix"
+;    chnset ${flangerRate.toFixed(2)}, "flangerRate"
+;    chnset ${flangerDepth.toFixed(2)}, "flangerDepth"
+;    chnset ${flangerFeedback.toFixed(2)}, "flangerFeedback"
+;    chnset ${flangerMix.toFixed(2)}, "flangerMix"
+;
+; 3. Run with: csound fractal.csd
+;
+; Or use Cabbage/CsoundQt which will use default values of 0
 
 ; Total duration: ${elapsedSeconds.toFixed(1)} seconds
 ; Total notes: ${csdScoreNotes.length}
