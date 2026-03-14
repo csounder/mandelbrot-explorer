@@ -82,12 +82,22 @@
 
       .main-grid {
         display: grid;
-        grid-template-columns: 320px 1fr;
+        grid-template-columns: 280px 1fr 320px;
         gap: 15px;
         margin-bottom: 15px;
       }
 
       .controls-panel {
+        background: var(--bg-secondary);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 12px;
+        height: fit-content;
+        max-height: calc(100vh - 180px);
+        overflow-y: auto;
+      }
+
+      .audio-panel {
         background: var(--bg-secondary);
         border: 1px solid var(--border);
         border-radius: 8px;
@@ -98,8 +108,8 @@
       }
 
       .control-section {
-        margin-bottom: 20px;
-        padding-bottom: 15px;
+        margin-bottom: 16px;
+        padding-bottom: 12px;
         border-bottom: 1px solid var(--border);
       }
 
@@ -111,22 +121,45 @@
 
       .control-section h3 {
         font-family: "Orbitron", monospace;
-        font-size: 0.95em;
+        font-size: 0.9em;
         color: var(--accent);
-        margin-bottom: 12px;
+        margin-bottom: 10px;
         text-transform: uppercase;
         letter-spacing: 1px;
       }
 
+      .control-section.collapsible h3 {
+        cursor: pointer;
+        user-select: none;
+      }
+
+      .control-section.collapsible h3::before {
+        content: "▼ ";
+        display: inline-block;
+        transition: transform 0.2s;
+      }
+
+      .control-section.collapsible.collapsed h3::before {
+        transform: rotate(-90deg);
+      }
+
+      .control-section.collapsible.collapsed .control-group {
+        display: none;
+      }
+
+      .control-section.collapsible.collapsed .path-list {
+        display: none;
+      }
+
       .control-group {
-        margin-bottom: 12px;
+        margin-bottom: 10px;
       }
 
       .control-group label {
         display: block;
         margin-bottom: 4px;
         color: var(--text-dim);
-        font-size: 0.9em;
+        font-size: 0.85em;
       }
 
       .control-group input[type="range"] {
@@ -460,6 +493,61 @@
         border-color: #ff4444;
       }
 
+      .mapping-display {
+        background: var(--bg-tertiary);
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        padding: 10px;
+        font-size: 0.85em;
+        line-height: 1.6;
+      }
+
+      .mapping-row {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 4px;
+        color: var(--text-dim);
+      }
+
+      .mapping-row:last-child {
+        margin-bottom: 0;
+      }
+
+      .mapping-source {
+        color: var(--text);
+      }
+
+      .mapping-target {
+        color: var(--accent);
+        font-weight: 600;
+      }
+
+      .preset-manager {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 6px;
+        margin-bottom: 8px;
+      }
+
+      .preset-manager input[type="text"] {
+        padding: 6px 10px;
+        background: var(--bg-tertiary);
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        color: var(--text);
+        font-family: "Rajdhani", sans-serif;
+        font-size: 0.9em;
+      }
+
+      @media (max-width: 1400px) {
+        .main-grid {
+          grid-template-columns: 280px 1fr;
+        }
+        .audio-panel {
+          display: none;
+        }
+      }
+
       @media (max-width: 1200px) {
         .main-grid {
           grid-template-columns: 1fr;
@@ -748,56 +836,8 @@
             </div>
           </div>
 
-          <!-- Audio Controls -->
-          <div class="control-section">
-            <h3>Csound Audio</h3>
-            <div class="control-group">
-              <button class="btn" id="initAudioBtn" onclick="initCsound()">
-                🔊 Initialize Csound
-              </button>
-            </div>
-            <div class="control-group">
-              <button
-                class="btn btn-secondary"
-                id="playAudioBtn"
-                onclick="toggleAudio()"
-                disabled
-              >
-                ▶ Play Audio
-              </button>
-            </div>
-            <div class="control-group">
-              <label
-                >Master Volume
-                <span class="value-display" id="volumeDisplay">70</span></label
-              >
-              <input
-                type="range"
-                id="masterVolume"
-                min="0"
-                max="100"
-                value="70"
-                disabled
-              />
-            </div>
-            <div class="control-group">
-              <label
-                >Reverb Mix
-                <span class="value-display" id="reverbDisplay">30</span></label
-              >
-              <input
-                type="range"
-                id="reverbMix"
-                min="0"
-                max="100"
-                value="30"
-                disabled
-              />
-            </div>
-          </div>
-
-          <!-- Path Recording -->
-          <div class="control-section">
+          <!-- Path Recording (Collapsible) -->
+          <div class="control-section collapsible collapsed">
             <h3>Path Recording</h3>
             <div class="control-group">
               <button
@@ -831,9 +871,6 @@
             <button class="btn btn-secondary" onclick="downloadImage()">
               💾 Save Image
             </button>
-            <button class="btn" onclick="generateCsound()">
-              Generate .CSD File
-            </button>
           </div>
         </div>
 
@@ -850,6 +887,278 @@
 
           <div class="mode-indicator" id="modeIndicator">Mandelbrot</div>
           <div class="audio-indicator" id="audioIndicator">♪ Audio Playing</div>
+        </div>
+
+        <!-- Audio Controls Panel -->
+        <div class="audio-panel">
+          <!-- Csound Engine -->
+          <div class="control-section">
+            <h3>Csound Engine</h3>
+            <div class="control-group">
+              <button class="btn" id="initAudioBtn" onclick="initCsound()">
+                🔊 Initialize Csound
+              </button>
+            </div>
+            <div class="control-group">
+              <button
+                class="btn btn-secondary"
+                id="playAudioBtn"
+                onclick="toggleAudio()"
+                disabled
+              >
+                ▶ Play Audio
+              </button>
+            </div>
+          </div>
+
+          <!-- Synthesis Type -->
+          <div class="control-section">
+            <h3>Synthesis Type</h3>
+            <div class="control-group">
+              <label>Algorithm</label>
+              <select id="synthType" disabled>
+                <option value="pluck">Pluck (Karplus-Strong)</option>
+                <option value="fm">FM Bell</option>
+                <option value="additive">Additive Bell</option>
+                <option value="clarinet">Clarinet</option>
+                <option value="organ">Organ</option>
+                <option value="granular">Granular</option>
+                <option value="noise">Filtered Noise</option>
+                <option value="subtractive">Subtractive (Moog Filter)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Musical Parameters -->
+          <div class="control-section">
+            <h3>Musical Parameters</h3>
+            <div class="control-group">
+              <label
+                >Tempo (BPM)
+                <span class="value-display" id="tempoDisplay">120</span></label
+              >
+              <input
+                type="range"
+                id="tempo"
+                min="30"
+                max="300"
+                value="120"
+                disabled
+              />
+            </div>
+            <div class="control-group">
+              <label
+                >Base Frequency (Hz)
+                <span class="value-display" id="baseFreqDisplay"
+                  >220</span
+                ></label
+              >
+              <input
+                type="range"
+                id="baseFreq"
+                min="55"
+                max="880"
+                value="220"
+                disabled
+              />
+            </div>
+            <div class="control-group">
+              <label
+                >Pitch Range (Octaves)
+                <span class="value-display" id="pitchRangeDisplay"
+                  >2.0</span
+                ></label
+              >
+              <input
+                type="range"
+                id="pitchRange"
+                min="0.5"
+                max="4"
+                step="0.5"
+                value="2"
+                disabled
+              />
+            </div>
+            <div class="control-group">
+              <label
+                >Note Density (%)
+                <span class="value-display" id="noteDensityDisplay"
+                  >50</span
+                ></label
+              >
+              <input
+                type="range"
+                id="noteDensity"
+                min="10"
+                max="100"
+                value="50"
+                disabled
+              />
+            </div>
+            <div class="control-group">
+              <label
+                >Duration Scale
+                <span class="value-display" id="durationScaleDisplay"
+                  >1.0</span
+                ></label
+              >
+              <input
+                type="range"
+                id="durationScale"
+                min="0.1"
+                max="3"
+                step="0.1"
+                value="1.0"
+                disabled
+              />
+            </div>
+          </div>
+
+          <!-- Parameter Mapping -->
+          <div class="control-section">
+            <h3>Parameter Mapping</h3>
+            <div class="control-group">
+              <label>Iteration Count →</label>
+              <select id="iterMap" disabled>
+                <option value="pitch" selected>Pitch</option>
+                <option value="amplitude">Amplitude</option>
+                <option value="brightness">Brightness</option>
+                <option value="duration">Duration</option>
+              </select>
+            </div>
+            <div class="control-group">
+              <label>X Position →</label>
+              <select id="xMap" disabled>
+                <option value="pan" selected>Pan</option>
+                <option value="pitch">Pitch</option>
+                <option value="brightness">Brightness</option>
+              </select>
+            </div>
+            <div class="control-group">
+              <label>Y Position →</label>
+              <select id="yMap" disabled>
+                <option value="duration" selected>Duration</option>
+                <option value="amplitude">Amplitude</option>
+                <option value="brightness">Brightness</option>
+              </select>
+            </div>
+            <div class="mapping-display" id="mappingDisplay">
+              <div class="mapping-row">
+                <span class="mapping-source">Iteration Count</span>
+                <span class="mapping-target" id="iterMapVal">→ Pitch</span>
+              </div>
+              <div class="mapping-row">
+                <span class="mapping-source">X Position</span>
+                <span class="mapping-target" id="xMapVal">→ Pan</span>
+              </div>
+              <div class="mapping-row">
+                <span class="mapping-source">Y Position</span>
+                <span class="mapping-target" id="yMapVal">→ Duration</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Envelope & Effects -->
+          <div class="control-section">
+            <h3>Envelope & Effects</h3>
+            <div class="control-group">
+              <label
+                >Attack (ms)
+                <span class="value-display" id="attackDisplay">10</span></label
+              >
+              <input
+                type="range"
+                id="attack"
+                min="1"
+                max="500"
+                value="10"
+                disabled
+              />
+            </div>
+            <div class="control-group">
+              <label
+                >Release (ms)
+                <span class="value-display" id="releaseDisplay"
+                  >100</span
+                ></label
+              >
+              <input
+                type="range"
+                id="release"
+                min="10"
+                max="2000"
+                value="100"
+                disabled
+              />
+            </div>
+            <div class="control-group">
+              <label
+                >Master Volume (%)
+                <span class="value-display" id="volumeDisplay">70</span></label
+              >
+              <input
+                type="range"
+                id="masterVolume"
+                min="0"
+                max="100"
+                value="70"
+                disabled
+              />
+            </div>
+            <div class="control-group">
+              <label
+                >Reverb Mix (%)
+                <span class="value-display" id="reverbDisplay">30</span></label
+              >
+              <input
+                type="range"
+                id="reverbMix"
+                min="0"
+                max="100"
+                value="30"
+                disabled
+              />
+            </div>
+          </div>
+
+          <!-- Audio Presets -->
+          <div class="control-section">
+            <h3>Audio Presets</h3>
+            <div class="preset-manager">
+              <input
+                type="text"
+                id="presetName"
+                placeholder="Preset name..."
+                disabled
+              />
+              <button class="btn btn-small" id="savePresetBtn" disabled>
+                Save
+              </button>
+            </div>
+            <div class="control-group">
+              <label>Load Preset</label>
+              <select id="loadPreset" disabled>
+                <option value="">-- Select Preset --</option>
+              </select>
+            </div>
+            <div class="control-group">
+              <button
+                class="btn btn-secondary btn-small"
+                id="loadPresetBtn"
+                disabled
+              >
+                Load Preset
+              </button>
+            </div>
+          </div>
+
+          <!-- Export -->
+          <div class="control-section">
+            <h3>Export</h3>
+            <button class="btn" onclick="generateCsound()">
+              Generate .CSD File
+            </button>
+          </div>
         </div>
       </div>
 
@@ -916,53 +1225,193 @@ nchnls = 2
 ; Global audio buses
 gaReverb init 0
 
-; Instrument 1: Fractal sonification
+; Instrument 1: Pluck (Karplus-Strong)
 instr 1
-  ; p4 = frequency (Hz)
-  ; p5 = amplitude
-  ; p6 = pan (0-1)
-  ; p7 = brightness (0-1)
-  
   iFreq = p4
   iAmp = p5
   iPan = p6
   iBright = p7
+  iAtk = p8 / 1000
+  iRel = p9 / 1000
   
-  ; Get master volume and reverb mix from control channels
   kMasterVol chnget "masterVol"
   kReverbMix chnget "reverbMix"
   
-  ; Envelope
-  kEnv = linsegr:k(0, 0.01, 1, 0.1, 0.8, 0.05, 0)
+  kEnv = linsegr:k(0, iAtk, iAmp, iRel, 0)
+  aSig = pluck:a(kEnv, iFreq, iFreq, 0, 1)
   
-  ; Oscillator with harmonic content based on brightness
-  iHarms = 1 + iBright * 8
-  aSig = gbuzz:a(iAmp * kEnv, iFreq, iHarms, 1, 0.9, -1)
+  kCutoff = 500 + iBright * 3000
+  aSig = tone(aSig, kCutoff)
   
-  ; Filter
+  aL, aR = pan2(aSig, iPan)
+  gaReverb = gaReverb + (aL + aR) * 0.5 * kReverbMix
+  out(aL * kMasterVol, aR * kMasterVol)
+endin
+
+; Instrument 2: FM Bell
+instr 2
+  iFreq = p4
+  iAmp = p5
+  iPan = p6
+  iBright = p7
+  iAtk = p8 / 1000
+  iRel = p9 / 1000
+  
+  kMasterVol chnget "masterVol"
+  kReverbMix chnget "reverbMix"
+  
+  kEnv = linsegr:k(0, iAtk, iAmp, iRel, 0)
+  kModIdx = 2 + iBright * 4
+  aSig = foscili:a(kEnv, iFreq, 1, 2.5, kModIdx, -1)
+  
+  aL, aR = pan2(aSig, iPan)
+  gaReverb = gaReverb + (aL + aR) * 0.5 * kReverbMix
+  out(aL * kMasterVol, aR * kMasterVol)
+endin
+
+; Instrument 3: Additive Bell
+instr 3
+  iFreq = p4
+  iAmp = p5
+  iPan = p6
+  iBright = p7
+  iAtk = p8 / 1000
+  iRel = p9 / 1000
+  
+  kMasterVol chnget "masterVol"
+  kReverbMix chnget "reverbMix"
+  
+  kEnv = linsegr:k(0, iAtk, iAmp, iRel, 0)
+  a1 = oscili:a(kEnv, iFreq, -1)
+  a2 = oscili:a(kEnv * 0.5, iFreq * 2.76, -1)
+  a3 = oscili:a(kEnv * 0.3 * iBright, iFreq * 5.4, -1)
+  a4 = oscili:a(kEnv * 0.2 * iBright, iFreq * 8.93, -1)
+  aSig = (a1 + a2 + a3 + a4) * 0.4
+  
+  aL, aR = pan2(aSig, iPan)
+  gaReverb = gaReverb + (aL + aR) * 0.5 * kReverbMix
+  out(aL * kMasterVol, aR * kMasterVol)
+endin
+
+; Instrument 4: Clarinet
+instr 4
+  iFreq = p4
+  iAmp = p5
+  iPan = p6
+  iBright = p7
+  iAtk = p8 / 1000
+  iRel = p9 / 1000
+  
+  kMasterVol chnget "masterVol"
+  kReverbMix chnget "reverbMix"
+  
+  kEnv = linsegr:k(0, iAtk, iAmp, iRel, 0)
+  a1 = oscili:a(kEnv, iFreq, -1)
+  a2 = oscili:a(kEnv * 0.3 * iBright, iFreq * 3, -1)
+  a3 = oscili:a(kEnv * 0.15 * iBright, iFreq * 5, -1)
+  aSig = (a1 + a2 + a3) * 0.5
+  
+  aL, aR = pan2(aSig, iPan)
+  gaReverb = gaReverb + (aL + aR) * 0.5 * kReverbMix
+  out(aL * kMasterVol, aR * kMasterVol)
+endin
+
+; Instrument 5: Organ
+instr 5
+  iFreq = p4
+  iAmp = p5
+  iPan = p6
+  iBright = p7
+  iAtk = p8 / 1000
+  iRel = p9 / 1000
+  
+  kMasterVol chnget "masterVol"
+  kReverbMix chnget "reverbMix"
+  
+  kEnv = linsegr:k(0, iAtk, iAmp, iRel, 0)
+  a1 = oscili:a(kEnv * 0.3, iFreq, -1)
+  a2 = oscili:a(kEnv * 0.3, iFreq * 2, -1)
+  a3 = oscili:a(kEnv * 0.2 * iBright, iFreq * 3, -1)
+  a4 = oscili:a(kEnv * 0.15 * iBright, iFreq * 4, -1)
+  aSig = (a1 + a2 + a3 + a4) * 0.4
+  
+  aL, aR = pan2(aSig, iPan)
+  gaReverb = gaReverb + (aL + aR) * 0.5 * kReverbMix
+  out(aL * kMasterVol, aR * kMasterVol)
+endin
+
+; Instrument 6: Granular
+instr 6
+  iFreq = p4
+  iAmp = p5
+  iPan = p6
+  iBright = p7
+  iAtk = p8 / 1000
+  iRel = p9 / 1000
+  
+  kMasterVol chnget "masterVol"
+  kReverbMix chnget "reverbMix"
+  
+  kEnv = linsegr:k(0, iAtk, iAmp, iRel, 0)
+  kDens = 10 + iBright * 40
+  kGrainSize = 0.01 + iBright * 0.05
+  aSig = grain3:a(iFreq, 0, 1, 0, kGrainSize, kDens, 100, -1, -1, 0)
+  aSig = aSig * kEnv * 0.3
+  
+  aL, aR = pan2(aSig, iPan)
+  gaReverb = gaReverb + (aL + aR) * 0.5 * kReverbMix
+  out(aL * kMasterVol, aR * kMasterVol)
+endin
+
+; Instrument 7: Filtered Noise
+instr 7
+  iFreq = p4
+  iAmp = p5
+  iPan = p6
+  iBright = p7
+  iAtk = p8 / 1000
+  iRel = p9 / 1000
+  
+  kMasterVol chnget "masterVol"
+  kReverbMix chnget "reverbMix"
+  
+  kEnv = linsegr:k(0, iAtk, iAmp, iRel, 0)
+  aSig = noise:a(kEnv * 2, 0)
+  kCf = iFreq * (1 + iBright * 2)
+  aSig = butterbp(aSig, kCf, kCf * 0.1)
+  
+  aL, aR = pan2(aSig, iPan)
+  gaReverb = gaReverb + (aL + aR) * 0.5 * kReverbMix
+  out(aL * kMasterVol, aR * kMasterVol)
+endin
+
+; Instrument 8: Subtractive (Moog Filter)
+instr 8
+  iFreq = p4
+  iAmp = p5
+  iPan = p6
+  iBright = p7
+  iAtk = p8 / 1000
+  iRel = p9 / 1000
+  
+  kMasterVol chnget "masterVol"
+  kReverbMix chnget "reverbMix"
+  
+  kEnv = linsegr:k(0, iAtk, iAmp, iRel, 0)
+  aSig = vco2:a(kEnv, iFreq, 0)
   kCutoff = iFreq * (2 + iBright * 4)
   aSig = moogladder:a(aSig, kCutoff, 0.3)
   
-  ; Stereo pan
-  aL = aSig * sqrt(1 - iPan)
-  aR = aSig * sqrt(iPan)
-  
-  ; Send to reverb
+  aL, aR = pan2(aSig, iPan)
   gaReverb = gaReverb + (aL + aR) * 0.5 * kReverbMix
-  
-  ; Dry output
   out(aL * kMasterVol, aR * kMasterVol)
 endin
 
 ; Instrument 999: Reverb
 instr 999
-  ; Get master volume from control channel
   kMasterVol chnget "masterVol"
-  
-  aL, aR freeverb gaReverb, gaReverb, 0.85, 0.7
+  aL, aR = freeverb(gaReverb, gaReverb, 0.85, 0.7)
   out(aL * kMasterVol, aR * kMasterVol)
-  
-  ; Clear reverb bus
   gaReverb = 0
 endin
 `;
@@ -1002,6 +1451,23 @@ endin
           document.getElementById("playAudioBtn").disabled = false;
           document.getElementById("masterVolume").disabled = false;
           document.getElementById("reverbMix").disabled = false;
+
+          // Enable new audio parameter controls
+          document.getElementById("synthType").disabled = false;
+          document.getElementById("tempo").disabled = false;
+          document.getElementById("baseFreq").disabled = false;
+          document.getElementById("pitchRange").disabled = false;
+          document.getElementById("noteDensity").disabled = false;
+          document.getElementById("durationScale").disabled = false;
+          document.getElementById("attack").disabled = false;
+          document.getElementById("release").disabled = false;
+          document.getElementById("iterMap").disabled = false;
+          document.getElementById("xMap").disabled = false;
+          document.getElementById("yMap").disabled = false;
+          document.getElementById("presetName").disabled = false;
+          document.getElementById("savePresetBtn").disabled = false;
+          document.getElementById("loadPreset").disabled = false;
+          document.getElementById("loadPresetBtn").disabled = false;
 
           updateStatus(
             "Csound WASM ready! Click 'Play Audio' to start.",
@@ -1048,6 +1514,76 @@ endin
           await updateCsoundControls();
         });
 
+      // Setup new audio parameter listeners
+      document.getElementById("synthType").addEventListener("change", (e) => {
+        updateStatus(`Synthesis type: ${e.target.value}`, "success");
+      });
+
+      document.getElementById("tempo").addEventListener("input", (e) => {
+        document.getElementById("tempoDisplay").textContent = e.target.value;
+      });
+
+      document.getElementById("baseFreq").addEventListener("input", (e) => {
+        document.getElementById("baseFreqDisplay").textContent = e.target.value;
+      });
+
+      document.getElementById("pitchRange").addEventListener("input", (e) => {
+        document.getElementById("pitchRangeDisplay").textContent = parseFloat(
+          e.target.value,
+        ).toFixed(1);
+      });
+
+      document.getElementById("noteDensity").addEventListener("input", (e) => {
+        document.getElementById("noteDensityDisplay").textContent =
+          e.target.value;
+      });
+
+      document
+        .getElementById("durationScale")
+        .addEventListener("input", (e) => {
+          document.getElementById("durationScaleDisplay").textContent =
+            parseFloat(e.target.value).toFixed(1);
+        });
+
+      document.getElementById("attack").addEventListener("input", (e) => {
+        document.getElementById("attackDisplay").textContent = e.target.value;
+      });
+
+      document.getElementById("release").addEventListener("input", (e) => {
+        document.getElementById("releaseDisplay").textContent = e.target.value;
+      });
+
+      // Parameter mapping listeners
+      document.getElementById("iterMap").addEventListener("change", () => {
+        updateMappingDisplay();
+      });
+
+      document.getElementById("xMap").addEventListener("change", () => {
+        updateMappingDisplay();
+      });
+
+      document.getElementById("yMap").addEventListener("change", () => {
+        updateMappingDisplay();
+      });
+
+      // Mapping display update function
+      function updateMappingDisplay() {
+        const iterMap = document.getElementById("iterMap").value;
+        const xMap = document.getElementById("xMap").value;
+        const yMap = document.getElementById("yMap").value;
+
+        function capitalize(str) {
+          return str.charAt(0).toUpperCase() + str.slice(1);
+        }
+
+        document.getElementById("iterMapVal").textContent =
+          "→ " + capitalize(iterMap);
+        document.getElementById("xMapVal").textContent =
+          "→ " + capitalize(xMap);
+        document.getElementById("yMapVal").textContent =
+          "→ " + capitalize(yMap);
+      }
+
       // ============================================================================
       // FRACTAL RENDERING - 2D
       // ============================================================================
@@ -1093,7 +1629,19 @@ endin
       // Initialize
       function init() {
         setupEventListeners();
+        setupCollapsibleSections();
         render2D();
+      }
+
+      // Setup collapsible sections
+      function setupCollapsibleSections() {
+        document
+          .querySelectorAll(".control-section.collapsible h3")
+          .forEach((header) => {
+            header.addEventListener("click", function () {
+              this.parentElement.classList.toggle("collapsed");
+            });
+          });
       }
 
       // Event listeners
@@ -1723,51 +2271,139 @@ endin
         if (!audioPlaying || !csoundReady) return;
 
         try {
-          // Sonify fractal data
-          if (fractalData.length > 0) {
-            // Sample a subset of points
-            const sample = fractalData
-              .filter((_, i) => i % 5 === 0)
-              .slice(0, 20);
-
-            console.log(`Sending ${sample.length} notes to Csound...`);
-
-            for (const point of sample) {
-              if (!audioPlaying) break;
-
-              // Map iteration to pitch (MIDI 36-84)
-              const pitch = 36 + (point.iter / config.maxIter) * 48;
-              const freq = 440 * Math.pow(2, (pitch - 69) / 12);
-
-              // Map position to pan
-              const pan = point.x / canvas2D.width;
-
-              // Map iteration density to brightness
-              const brightness = Math.min(1, point.iter / config.maxIter);
-
-              // Amplitude
-              const amp = 0.2;
-
-              // Duration
-              const dur = 0.3;
-
-              // Send note to Csound
-              const scoreEvent = `i 1 0 ${dur} ${freq.toFixed(2)} ${amp} ${pan.toFixed(3)} ${brightness.toFixed(3)}`;
-              console.log("Sending: " + scoreEvent);
-              await csound.inputMessage(scoreEvent);
-            }
-          } else {
+          if (fractalData.length === 0) {
             console.log("No fractal data to sonify");
+            setTimeout(() => audioLoop(), 1000);
+            return;
           }
+
+          // Get current settings from UI
+          const synthType = document.getElementById("synthType").value;
+          const tempo = parseFloat(document.getElementById("tempo").value);
+          const baseFreq = parseFloat(
+            document.getElementById("baseFreq").value,
+          );
+          const pitchRange = parseFloat(
+            document.getElementById("pitchRange").value,
+          );
+          const density =
+            parseFloat(document.getElementById("noteDensity").value) / 100;
+          const durationScale = parseFloat(
+            document.getElementById("durationScale").value,
+          );
+          const attack = parseFloat(document.getElementById("attack").value);
+          const release = parseFloat(document.getElementById("release").value);
+
+          // Get parameter mappings
+          const iterMap = document.getElementById("iterMap").value;
+          const xMap = document.getElementById("xMap").value;
+          const yMap = document.getElementById("yMap").value;
+
+          // Map synthesis type to instrument number
+          const instrMap = {
+            pluck: 1,
+            fm: 2,
+            additive: 3,
+            clarinet: 4,
+            organ: 5,
+            granular: 6,
+            noise: 7,
+            subtractive: 8,
+          };
+          const instrNum = instrMap[synthType] || 1;
+
+          // Apply density filter
+          const filtered = fractalData.filter(() => Math.random() < density);
+          const sample = filtered.slice(0, Math.min(50, filtered.length));
+
+          console.log(
+            `Sending ${sample.length} notes (${synthType}, ${tempo} BPM)...`,
+          );
+
+          // Calculate timing based on tempo
+          const beatDuration = 60 / tempo;
+          let time = 0;
+
+          for (const point of sample) {
+            if (!audioPlaying) break;
+
+            // Initialize parameter values
+            let freq, amp, pan, brightness, dur;
+
+            // Map iteration count
+            const iterRatio = point.iter / config.maxIter;
+            if (iterMap === "pitch") {
+              freq = baseFreq * Math.pow(2, iterRatio * pitchRange);
+            } else if (iterMap === "amplitude") {
+              amp = 0.1 + iterRatio * 0.7;
+            } else if (iterMap === "brightness") {
+              brightness = iterRatio;
+            } else if (iterMap === "duration") {
+              dur = (0.1 + iterRatio * 0.9) * durationScale;
+            }
+
+            // Map X position
+            const xRatio = point.x / canvas2D.width;
+            if (xMap === "pan") {
+              pan = xRatio;
+            } else if (xMap === "pitch") {
+              freq = baseFreq * Math.pow(2, xRatio * pitchRange);
+            } else if (xMap === "brightness") {
+              brightness = xRatio;
+            }
+
+            // Map Y position
+            const yRatio = 1 - point.y / canvas2D.height;
+            if (yMap === "duration") {
+              dur = (0.1 + yRatio * 0.9) * durationScale;
+            } else if (yMap === "amplitude") {
+              amp = 0.1 + yRatio * 0.7;
+            } else if (yMap === "brightness") {
+              brightness = yRatio;
+            }
+
+            // Set defaults for unmapped parameters
+            if (freq === undefined)
+              freq = baseFreq * Math.pow(2, iterRatio * pitchRange);
+            if (amp === undefined) amp = 0.3;
+            if (pan === undefined) pan = xRatio;
+            if (brightness === undefined) brightness = iterRatio;
+            if (dur === undefined) dur = 0.5 * durationScale;
+
+            // Clamp values
+            freq = Math.max(20, Math.min(20000, freq));
+            amp = Math.max(0.05, Math.min(0.8, amp));
+            pan = Math.max(0, Math.min(1, pan));
+            brightness = Math.max(0, Math.min(1, brightness));
+            dur = Math.max(0.05, Math.min(5, dur));
+
+            // Send note to Csound
+            const scoreEvent = `i ${instrNum} ${time.toFixed(3)} ${dur.toFixed(3)} ${freq.toFixed(2)} ${amp.toFixed(3)} ${pan.toFixed(3)} ${brightness.toFixed(3)} ${attack} ${release}`;
+
+            await csound.inputMessage(scoreEvent);
+
+            // Increment time based on tempo
+            time += beatDuration * 0.25; // 16th note spacing
+          }
+
+          // Loop based on tempo
+          const loopDelay = Math.max(
+            500,
+            (60 / tempo) * sample.length * 0.25 * 1000,
+          );
+          setTimeout(() => audioLoop(), loopDelay);
         } catch (err) {
           console.error("Audio loop error:", err);
           updateStatus("Audio error: " + err.message, "error");
+          if (audioPlaying) {
+            setTimeout(() => audioLoop(), 1000);
+          }
         }
+      }
 
-        // Loop
-        if (audioPlaying) {
-          setTimeout(() => audioLoop(), 1000);
-        }
+      function highlightPlayingPoints(points) {
+        // This will be implemented in Phase 6 - for now just log
+        console.log(`Playing ${points.length} points`);
       }
 
       // ============================================================================
