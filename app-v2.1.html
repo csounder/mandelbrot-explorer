@@ -5946,38 +5946,69 @@ e
       };
 
       window.downloadCsd = function () {
-        console.log("Download CSD clicked");
-        const csdContent = document.getElementById("csoundOutput").value;
-        console.log("CSD content length:", csdContent.length);
+        try {
+          console.log("Download CSD clicked");
+          const downloadBtn = document.getElementById("downloadCsdBtn");
+          console.log("Download button disabled?", downloadBtn.disabled);
 
-        if (!csdContent || csdContent.length < 100) {
-          console.log("CSD content too short or empty");
-          updateStatus(
-            "No CSD file to download - record audio first!",
-            "error",
-          );
-          return;
+          const csdContent = document.getElementById("csoundOutput").value;
+          console.log("CSD content length:", csdContent.length);
+
+          if (!csdContent || csdContent.length < 100) {
+            console.log("CSD content too short or empty");
+            updateStatus(
+              "No CSD file to download - record and finalize first!",
+              "error",
+            );
+            return;
+          }
+
+          // Check if CSD is complete
+          if (!csdContent.includes("</CsoundSynthesizer>")) {
+            console.log("CSD not finalized yet");
+            updateStatus("CSD not complete - stop recording first!", "error");
+            return;
+          }
+
+          // Generate filename: preset_date_time.csd
+          const now = new Date();
+          const dateStr = now.toISOString().split("T")[0]; // YYYY-MM-DD
+          const timeStr = now.toTimeString().split(" ")[0].replace(/:/g, "-"); // HH-MM-SS
+          const synthType = document.getElementById("synthType").value;
+          const filename = `${synthType}_${dateStr}_${timeStr}.csd`;
+
+          // Create download link
+          console.log("Creating download with filename:", filename);
+          const blob = new Blob([csdContent], {
+            type: "text/plain;charset=utf-8",
+          });
+          console.log("Blob created, size:", blob.size);
+
+          const url = URL.createObjectURL(blob);
+          console.log("Blob URL created:", url);
+
+          const link = document.createElement("a");
+          link.download = filename;
+          link.href = url;
+          link.style.display = "none";
+          document.body.appendChild(link);
+
+          console.log("Clicking download link...");
+          link.click();
+
+          // Clean up
+          setTimeout(() => {
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            console.log("Cleanup complete");
+          }, 100);
+
+          console.log("Download triggered successfully");
+          updateStatus(`CSD file saved as ${filename}!`, "success");
+        } catch (error) {
+          console.error("Download error:", error);
+          updateStatus(`Download failed: ${error.message}`, "error");
         }
-
-        // Generate filename: preset_date_time.csd
-        const now = new Date();
-        const dateStr = now.toISOString().split("T")[0]; // YYYY-MM-DD
-        const timeStr = now.toTimeString().split(" ")[0].replace(/:/g, "-"); // HH-MM-SS
-        const synthType = document.getElementById("synthType").value;
-        const filename = `${synthType}_${dateStr}_${timeStr}.csd`;
-
-        // Create download link
-        console.log("Creating download with filename:", filename);
-        const blob = new Blob([csdContent], { type: "text/plain" });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.download = filename;
-        link.href = url;
-        link.click();
-        URL.revokeObjectURL(url);
-
-        console.log("Download triggered");
-        updateStatus(`CSD file saved as ${filename}!`, "success");
       };
 
       // ============================================================================
