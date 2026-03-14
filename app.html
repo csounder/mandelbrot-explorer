@@ -892,15 +892,19 @@ The fractal maps to sound:
 
       window.initCsound = async function () {
         try {
+          console.log("Starting Csound initialization...");
           updateStatus("Loading Csound WASM v7...", "success");
 
           // Load Csound from CDN
+          console.log("Importing Csound module from CDN...");
           const { Csound: CsoundModule } = await import(
             "https://cdn.jsdelivr.net/npm/@csound/browser@7.0.0-beta26/dist/csound.js"
           );
 
+          console.log("Csound module loaded, creating instance...");
           Csound = CsoundModule;
           csound = await Csound({});
+          console.log("Csound instance created");
 
           // Compile orchestra
           const orchestra = `
@@ -911,10 +915,6 @@ nchnls = 2
 
 ; Global audio buses
 gaReverb init 0
-
-; Control channels
-gkMasterVol init 0.7
-gkReverbMix init 0.3
 
 ; Instrument 1: Fractal sonification
 instr 1
@@ -927,6 +927,10 @@ instr 1
   iAmp = p5
   iPan = p6
   iBright = p7
+  
+  ; Get master volume and reverb mix from control channels
+  kMasterVol chnget "masterVol"
+  kReverbMix chnget "reverbMix"
   
   ; Envelope
   kEnv = linsegr:k(0, 0.01, 1, 0.1, 0.8, 0.05, 0)
@@ -944,33 +948,54 @@ instr 1
   aR = aSig * sqrt(iPan)
   
   ; Send to reverb
-  gaReverb = gaReverb + (aL + aR) * 0.5 * gkReverbMix
+  gaReverb = gaReverb + (aL + aR) * 0.5 * kReverbMix
   
   ; Dry output
-  out(aL * gkMasterVol, aR * gkMasterVol)
+  out(aL * kMasterVol, aR * kMasterVol)
 endin
 
 ; Instrument 999: Reverb
 instr 999
+  ; Get master volume from control channel
+  kMasterVol chnget "masterVol"
+  
   aL, aR freeverb gaReverb, gaReverb, 0.85, 0.7
-  out(aL * gkMasterVol, aR * gkMasterVol)
+  out(aL * kMasterVol, aR * kMasterVol)
   
   ; Clear reverb bus
   gaReverb = 0
 endin
-
-; Sine wave for gbuzz
-f1 0 16384 10 1
 `;
 
+          console.log("Compiling orchestra...");
           await csound.compileOrc(orchestra);
+          console.log("Orchestra compiled successfully");
+
+          // Compile ftable for gbuzz
+          console.log("Creating function table for gbuzz...");
+          await csound.evalCode("f1 0 16384 10 1");
+          console.log("Function table created");
+
+          console.log("Setting audio output option...");
           await csound.setOption("-odac");
+
+          console.log("Starting Csound performance...");
           await csound.start();
+          console.log("Csound performance started");
+
+          // Initialize control channels
+          console.log("Initializing control channels...");
+          await csound.setControlChannel("masterVol", 0.7);
+          await csound.setControlChannel("reverbMix", 0.3);
+          console.log("Control channels initialized");
 
           // Start reverb instrument
+          console.log("Starting reverb instrument...");
           await csound.inputMessage("i 999 0 -1");
+          console.log("Reverb instrument started");
 
           csoundReady = true;
+          console.log("Csound is ready!");
 
           // Enable audio controls
           document.getElementById("initAudioBtn").disabled = true;
@@ -982,8 +1007,15 @@ f1 0 16384 10 1
             "Csound WASM ready! Click 'Play Audio' to start.",
             "success",
           );
+
+          // Get audio context info
+          const audioContext = await csound.getAudioContext();
+          console.log("Audio Context State:", audioContext.state);
+          console.log("Sample Rate:", await csound.getSr());
+          console.log("Ksmps:", await csound.getKsmps());
         } catch (err) {
           console.error("Csound initialization failed:", err);
+          console.error("Error stack:", err.stack);
           updateStatus("Csound initialization failed: " + err.message, "error");
         }
       };
@@ -997,8 +1029,8 @@ f1 0 16384 10 1
         const reverb =
           parseInt(document.getElementById("reverbMix").value) / 100;
 
-        await csound.evalCode(`gkMasterVol = ${volume}`);
-        await csound.evalCode(`gkReverbMix = ${reverb}`);
+        await csound.setControlChannel("masterVol", volume);
+        await csound.setControlChannel("reverbMix", reverb);
       };
 
       // Setup audio control listeners
@@ -1690,38 +1722,52 @@ f1 0 16384 10 1
       async function audioLoop() {
         if (!audioPlaying || !csoundReady) return;
 
-        // Sonify fractal data
-        if (fractalData.length > 0) {
-          // Sample a subset of points
-          const sample = fractalData.filter((_, i) => i % 5 === 0).slice(0, 20);
+        try {
+          // Sonify fractal data
+          if (fractalData.length > 0) {
+            // Sample a subset of points
+            const sample = fractalData
+              .filter((_, i) => i % 5 === 0)
+              .slice(0, 20);
 
-          for (const point of sample) {
-            if (!audioPlaying) break;
+            console.log(`Sending ${sample.length} notes to Csound...`);
 
-            // Map iteration to pitch (MIDI 36-84)
-            const pitch = 36 + (point.iter / config.maxIter) * 48;
-            const freq = 440 * Math.pow(2, (pitch - 69) / 12);
+            for (const point of sample) {
+              if (!audioPlaying) break;
 
-            // Map position to pan
-            const pan = point.x / canvas2D.width;
+              // Map iteration to pitch (MIDI 36-84)
+              const pitch = 36 + (point.iter / config.maxIter) * 48;
+              const freq = 440 * Math.pow(2, (pitch - 69) / 12);
 
-            // Map iteration density to brightness
-            const brightness = Math.min(1, point.iter / config.maxIter);
+              // Map position to pan
+              const pan = point.x / canvas2D.width;
 
-            // Amplitude
-            const amp = 0.2;
+              // Map iteration density to brightness
+              const brightness = Math.min(1, point.iter / config.maxIter);
 
-            // Duration
-            const dur = 0.3;
+              // Amplitude
+              const amp = 0.2;
 
-            // Send note to Csound
-            const scoreEvent = `i 1 0 ${dur} ${freq} ${amp} ${pan} ${brightness}`;
-            await csound.inputMessage(scoreEvent);
+              // Duration
+              const dur = 0.3;
+
+              // Send note to Csound
+              const scoreEvent = `i 1 0 ${dur} ${freq.toFixed(2)} ${amp} ${pan.toFixed(3)} ${brightness.toFixed(3)}`;
+              console.log("Sending: " + scoreEvent);
+              await csound.inputMessage(scoreEvent);
+            }
+          } else {
+            console.log("No fractal data to sonify");
           }
+        } catch (err) {
+          console.error("Audio loop error:", err);
+          updateStatus("Audio error: " + err.message, "error");
         }
 
         // Loop
-        setTimeout(() => audioLoop(), 1000);
+        if (audioPlaying) {
+          setTimeout(() => audioLoop(), 1000);
+        }
       }
 
       // ============================================================================
