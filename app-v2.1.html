@@ -1699,6 +1699,15 @@
             <button class="btn" id="generateCsdBtn" onclick="generateCsound()">
               🔴 Start CSD Recording
             </button>
+            <button
+              class="btn-secondary"
+              id="downloadCsdBtn"
+              onclick="downloadCsd()"
+              style="margin-top: 8px; width: 100%"
+              disabled
+            >
+              💾 Download .CSD File
+            </button>
           </div>
         </div>
       </div>
@@ -4772,8 +4781,20 @@ The fractal maps to sound:
               if (audioPlaying && csound && csoundReady) {
                 csound.inputMessage(scoreEvent);
 
-                // Add note to CSD recording if active
-                addNoteToCSD(time, dur, freq, amp, pan, brightness);
+                // Add note to CSD recording if active (pass all parameters)
+                addNoteToCSD(
+                  time,
+                  dur,
+                  freq,
+                  amp,
+                  pan,
+                  brightness,
+                  noteAttack,
+                  noteRelease,
+                  extraParam1,
+                  extraParam2,
+                  instrNum,
+                );
 
                 // Apply effect parameter mappings
                 const applyEffectMapping = (
@@ -5371,6 +5392,10 @@ f1 0 16384 10 1  ; Sine wave for oscillators
 
           document.getElementById("csoundOutput").value = header;
           btn.textContent = "⏹ Stop CSD Recording";
+
+          // Disable download button while recording
+          document.getElementById("downloadCsdBtn").disabled = true;
+
           updateStatus(
             "CSD recording started - notes will appear as you play!",
             "success",
@@ -5745,10 +5770,23 @@ endin
       }
 
       // Function to add a note to the live CSD recording
-      function addNoteToCSD(time, duration, freq, amp, pan, brightness) {
+      function addNoteToCSD(
+        time,
+        duration,
+        freq,
+        amp,
+        pan,
+        brightness,
+        attack,
+        release,
+        smoothness,
+        angle,
+        instrNum,
+      ) {
         if (!csdRecording) return;
 
-        const noteEvent = `i 1 ${time.toFixed(3)} ${duration.toFixed(3)} ${freq.toFixed(2)} ${amp.toFixed(3)} ${pan.toFixed(3)} ${brightness.toFixed(3)}\n`;
+        // Format the note event exactly as it's sent to Csound
+        const noteEvent = `i ${instrNum} ${time.toFixed(3)} ${duration.toFixed(3)} ${freq.toFixed(2)} ${amp.toFixed(3)} ${pan.toFixed(3)} ${brightness.toFixed(3)} ${attack} ${release} ${smoothness.toFixed(3)} ${angle.toFixed(3)}\n`;
         csdScoreNotes.push(noteEvent);
 
         // Update the textarea to show accumulating notes
@@ -5840,6 +5878,9 @@ e
         const currentText = document.getElementById("csoundOutput").value;
         document.getElementById("csoundOutput").value = currentText + footer;
 
+        // Enable download button
+        document.getElementById("downloadCsdBtn").disabled = false;
+
         updateStatus(
           `CSD recording complete! ${csdScoreNotes.length} notes captured.`,
           "success",
@@ -5861,6 +5902,36 @@ e
         link.href = canvas2D.toDataURL();
         link.click();
         updateStatus("Image saved!", "success");
+      };
+
+      window.downloadCsd = function () {
+        const csdContent = document.getElementById("csoundOutput").value;
+
+        if (!csdContent || csdContent.length < 100) {
+          updateStatus(
+            "No CSD file to download - record audio first!",
+            "error",
+          );
+          return;
+        }
+
+        // Generate filename: preset_date_time.csd
+        const now = new Date();
+        const dateStr = now.toISOString().split("T")[0]; // YYYY-MM-DD
+        const timeStr = now.toTimeString().split(" ")[0].replace(/:/g, "-"); // HH-MM-SS
+        const synthType = document.getElementById("synthType").value;
+        const filename = `${synthType}_${dateStr}_${timeStr}.csd`;
+
+        // Create download link
+        const blob = new Blob([csdContent], { type: "text/plain" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.download = filename;
+        link.href = url;
+        link.click();
+        URL.revokeObjectURL(url);
+
+        updateStatus(`CSD file saved as ${filename}!`, "success");
       };
 
       // ============================================================================
