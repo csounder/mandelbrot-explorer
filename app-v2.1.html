@@ -5233,6 +5233,7 @@ The fractal maps to sound:
       let csdRecording = false;
       let csdScoreNotes = [];
       let csdStartTime = 0;
+      let csdHeader = ""; // Store the header separately
 
       window.generateCsound = function () {
         if (fractalData.length === 0) {
@@ -5390,6 +5391,9 @@ f1 0 16384 10 1  ; Sine wave for oscillators
 
 ; --- SCORE EVENTS (recording in progress...) ---
 `;
+
+          // Store header for later reconstruction
+          csdHeader = header;
 
           document.getElementById("csoundOutput").value = header;
           btn.textContent = "⏹ Stop CSD Recording";
@@ -5791,10 +5795,10 @@ endin
         const noteEvent = `i ${instrNum} ${time.toFixed(3)} ${duration.toFixed(3)} ${freq.toFixed(2)} ${amp.toFixed(3)} ${pan.toFixed(3)} ${brightness.toFixed(3)} ${attack} ${release} ${smoothness.toFixed(3)} ${angle.toFixed(3)}\n`;
         csdScoreNotes.push(noteEvent);
 
-        // Update the textarea to show accumulating notes
-        const currentText = document.getElementById("csoundOutput").value;
+        // Update the textarea to show accumulating notes (for live feedback)
+        // We append to textarea for visual feedback, but finalizeCSD rebuilds from array
         const textarea = document.getElementById("csoundOutput");
-        textarea.value = currentText + noteEvent;
+        textarea.value = textarea.value + noteEvent;
 
         // Auto-scroll to bottom
         textarea.scrollTop = textarea.scrollHeight;
@@ -5886,15 +5890,23 @@ e
 `;
 
         const textarea = document.getElementById("csoundOutput");
-        const currentText = textarea.value;
 
-        // Check if we already finalized (content already has closing tags)
-        if (currentText.includes("</CsoundSynthesizer>")) {
+        // Check if we already finalized by checking the flag (more reliable than text search)
+        if (textarea.value.includes("</CsoundSynthesizer>")) {
           console.log("finalizeCSD: Already finalized, skipping");
           return;
         }
 
-        const finalCsd = currentText + footer;
+        // Rebuild the complete CSD from stored components (don't trust textarea)
+        // This prevents the "chopped notes" bug when textarea gets modified
+        const notesSection = csdScoreNotes.join("");
+        console.log(
+          "finalizeCSD: Rebuilding from",
+          csdScoreNotes.length,
+          "stored notes",
+        );
+
+        const finalCsd = csdHeader + notesSection + footer;
         textarea.value = finalCsd;
 
         console.log(
