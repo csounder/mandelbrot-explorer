@@ -5244,6 +5244,7 @@ The fractal maps to sound:
 
         if (!csdRecording) {
           // Start new CSD recording
+          console.log("Starting new CSD recording");
           csdRecording = true;
           csdScoreNotes = [];
           csdStartTime = Date.now();
@@ -5402,6 +5403,7 @@ f1 0 16384 10 1  ; Sine wave for oscillators
           );
         } else {
           // Stop recording and close the score
+          console.log("Stop button clicked, calling finalizeCSD");
           finalizeCSD();
           btn.textContent = "🔴 Start CSD Recording";
         }
@@ -5800,8 +5802,16 @@ endin
 
       // Function to finalize and close the CSD
       function finalizeCSD() {
-        if (!csdRecording) return;
+        if (!csdRecording) {
+          console.log("finalizeCSD: Not recording, skipping");
+          return;
+        }
 
+        console.log(
+          "finalizeCSD: Finalizing CSD with",
+          csdScoreNotes.length,
+          "notes",
+        );
         csdRecording = false;
 
         const elapsedSeconds = (Date.now() - csdStartTime) / 1000;
@@ -5876,20 +5886,31 @@ e
 `;
 
         const currentText = document.getElementById("csoundOutput").value;
-        document.getElementById("csoundOutput").value = currentText + footer;
+        const finalCsd = currentText + footer;
+        document.getElementById("csoundOutput").value = finalCsd;
+
+        console.log(
+          "finalizeCSD: Final CSD length:",
+          finalCsd.length,
+          "characters",
+        );
 
         // Enable download button
-        document.getElementById("downloadCsdBtn").disabled = false;
+        const downloadBtn = document.getElementById("downloadCsdBtn");
+        downloadBtn.disabled = false;
+        console.log("finalizeCSD: Download button enabled");
 
         updateStatus(
-          `CSD recording complete! ${csdScoreNotes.length} notes captured.`,
+          `CSD recording complete! ${csdScoreNotes.length} notes captured. Click Download to save.`,
           "success",
         );
       }
 
       // Auto-finalize CSD when audio stops or preset loads
       function stopCSDRecording() {
+        console.log("stopCSDRecording called, csdRecording =", csdRecording);
         if (csdRecording) {
+          console.log("Calling finalizeCSD from stopCSDRecording");
           finalizeCSD();
           document.getElementById("generateCsdBtn").textContent =
             "🔴 Start CSD Recording";
@@ -5905,9 +5926,12 @@ e
       };
 
       window.downloadCsd = function () {
+        console.log("Download CSD clicked");
         const csdContent = document.getElementById("csoundOutput").value;
+        console.log("CSD content length:", csdContent.length);
 
         if (!csdContent || csdContent.length < 100) {
+          console.log("CSD content too short or empty");
           updateStatus(
             "No CSD file to download - record audio first!",
             "error",
@@ -5923,6 +5947,7 @@ e
         const filename = `${synthType}_${dateStr}_${timeStr}.csd`;
 
         // Create download link
+        console.log("Creating download with filename:", filename);
         const blob = new Blob([csdContent], { type: "text/plain" });
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
@@ -5931,6 +5956,7 @@ e
         link.click();
         URL.revokeObjectURL(url);
 
+        console.log("Download triggered");
         updateStatus(`CSD file saved as ${filename}!`, "success");
       };
 
