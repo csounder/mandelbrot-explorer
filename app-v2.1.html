@@ -5885,9 +5885,17 @@ e
 ; Generated: ${new Date().toISOString()}
 `;
 
-        const currentText = document.getElementById("csoundOutput").value;
+        const textarea = document.getElementById("csoundOutput");
+        const currentText = textarea.value;
+
+        // Check if we already finalized (content already has closing tags)
+        if (currentText.includes("</CsoundSynthesizer>")) {
+          console.log("finalizeCSD: Already finalized, skipping");
+          return;
+        }
+
         const finalCsd = currentText + footer;
-        document.getElementById("csoundOutput").value = finalCsd;
+        textarea.value = finalCsd;
 
         console.log(
           "finalizeCSD: Final CSD length:",

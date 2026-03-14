@@ -1,0 +1,2716 @@
+<!doctype html>
+<!--
+  DR.C - MANDELBROT EXPLORER v2.0
+  Enhanced with Csound WASM real-time audio, 3D fractals, animation, and GPU acceleration
+  
+  Features:
+  - Mandelbrot & Julia sets (2D)
+  - Mandelbulb & Mandelbox (3D)
+  - Real-time Csound WASM synthesis
+  - Julia parameter animation
+  - Path recording/playback
+  - WebGL GPU acceleration
+  - Csound score export (.csd)
+-->
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dr.C - Mandelbrot Explorer v2.0</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;800&family=Rajdhani:wght@400;600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg-primary: #0a0a0a;
+        --bg-secondary: #151515;
+        --bg-tertiary: #1a1a1a;
+        --accent: #00ff88;
+        --accent-dim: #00cc66;
+        --accent-glow: rgba(0, 255, 136, 0.3);
+        --text: #e0e0e0;
+        --text-dim: #999;
+        --border: #333;
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Rajdhani", sans-serif;
+        background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
+        color: var(--text);
+        min-height: 100vh;
+        padding: 20px;
+        overflow-x: hidden;
+      }
+
+      .container {
+        max-width: 1600px;
+        margin: 0 auto;
+      }
+
+      header {
+        text-align: center;
+        margin-bottom: 20px;
+      }
+
+      h1 {
+        font-family: "Orbitron", monospace;
+        font-size: 2.5em;
+        font-weight: 800;
+        color: var(--accent);
+        text-shadow: 0 0 20px var(--accent-glow);
+        margin-bottom: 5px;
+      }
+
+      .version {
+        font-size: 0.9em;
+        color: var(--accent-dim);
+        font-weight: 600;
+      }
+
+      .subtitle {
+        font-size: 1.1em;
+        color: var(--text-dim);
+        font-weight: 400;
+      }
+
+      .main-grid {
+        display: grid;
+        grid-template-columns: 280px 1fr 320px;
+        gap: 15px;
+        margin-bottom: 15px;
+      }
+
+      .controls-panel {
+        background: var(--bg-secondary);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 12px;
+        height: fit-content;
+        max-height: calc(100vh - 180px);
+        overflow-y: auto;
+      }
+
+      .audio-panel {
+        background: var(--bg-secondary);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 15px;
+        height: fit-content;
+        max-height: calc(100vh - 180px);
+        overflow-y: auto;
+      }
+
+      .control-section {
+        margin-bottom: 16px;
+        padding-bottom: 12px;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .control-section:last-child {
+        border-bottom: none;
+        margin-bottom: 0;
+        padding-bottom: 0;
+      }
+
+      .control-section h3 {
+        font-family: "Orbitron", monospace;
+        font-size: 0.9em;
+        color: var(--accent);
+        margin-bottom: 10px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+
+      .control-section.collapsible h3 {
+        cursor: pointer;
+        user-select: none;
+      }
+
+      .control-section.collapsible h3::before {
+        content: "▼ ";
+        display: inline-block;
+        transition: transform 0.2s;
+      }
+
+      .control-section.collapsible.collapsed h3::before {
+        transform: rotate(-90deg);
+      }
+
+      .control-section.collapsible.collapsed .control-group {
+        display: none;
+      }
+
+      .control-section.collapsible.collapsed .path-list {
+        display: none;
+      }
+
+      .control-group {
+        margin-bottom: 10px;
+      }
+
+      .control-group label {
+        display: block;
+        margin-bottom: 4px;
+        color: var(--text-dim);
+        font-size: 0.85em;
+      }
+
+      .control-group input[type="range"] {
+        width: 100%;
+        height: 6px;
+        background: var(--bg-tertiary);
+        border-radius: 3px;
+        outline: none;
+        -webkit-appearance: none;
+      }
+
+      .control-group input[type="range"]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 14px;
+        height: 14px;
+        background: var(--accent);
+        border-radius: 50%;
+        cursor: pointer;
+        box-shadow: 0 0 10px var(--accent-glow);
+      }
+
+      .control-group input[type="range"]::-moz-range-thumb {
+        width: 14px;
+        height: 14px;
+        background: var(--accent);
+        border-radius: 50%;
+        cursor: pointer;
+        border: none;
+        box-shadow: 0 0 10px var(--accent-glow);
+      }
+
+      .control-group select,
+      .control-group input[type="number"] {
+        width: 100%;
+        padding: 6px 10px;
+        background: var(--bg-tertiary);
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        color: var(--text);
+        font-family: "Rajdhani", sans-serif;
+        font-size: 0.95em;
+      }
+
+      .value-display {
+        display: inline-block;
+        float: right;
+        color: var(--accent);
+        font-weight: 600;
+      }
+
+      .btn {
+        width: 100%;
+        padding: 10px;
+        background: linear-gradient(135deg, var(--accent-dim), var(--accent));
+        border: none;
+        border-radius: 6px;
+        color: #000;
+        font-family: "Orbitron", monospace;
+        font-size: 0.9em;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-bottom: 8px;
+      }
+
+      .btn:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 20px var(--accent-glow);
+      }
+
+      .btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      .btn-secondary {
+        background: var(--bg-tertiary);
+        color: var(--accent);
+        border: 1px solid var(--accent);
+      }
+
+      .btn-secondary:hover:not(:disabled) {
+        background: var(--accent);
+        color: #000;
+      }
+
+      .btn-small {
+        padding: 6px 10px;
+        font-size: 0.85em;
+      }
+
+      .canvas-container {
+        position: relative;
+        background: var(--bg-secondary);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        overflow: hidden;
+        min-height: 600px;
+      }
+
+      canvas {
+        display: block;
+        cursor: crosshair;
+        width: 100%;
+        height: auto;
+      }
+
+      #fractalCanvas3D {
+        width: 100%;
+        height: 600px;
+      }
+
+      .info-overlay {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        background: rgba(10, 10, 10, 0.85);
+        padding: 8px 12px;
+        border-radius: 6px;
+        font-family: "Orbitron", monospace;
+        font-size: 0.8em;
+        color: var(--accent);
+        pointer-events: none;
+        line-height: 1.5;
+      }
+
+      .info-overlay div {
+        margin-bottom: 2px;
+      }
+
+      .mode-indicator {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background: rgba(0, 255, 136, 0.2);
+        padding: 6px 14px;
+        border-radius: 20px;
+        border: 1px solid var(--accent);
+        font-family: "Orbitron", monospace;
+        font-size: 0.85em;
+        color: var(--accent);
+        text-transform: uppercase;
+        pointer-events: none;
+      }
+
+      .audio-indicator {
+        position: absolute;
+        bottom: 10px;
+        right: 10px;
+        background: rgba(0, 255, 136, 0.2);
+        padding: 6px 14px;
+        border-radius: 20px;
+        border: 1px solid var(--accent);
+        font-family: "Orbitron", monospace;
+        font-size: 0.8em;
+        color: var(--accent);
+        pointer-events: none;
+        display: none;
+      }
+
+      .audio-indicator.active {
+        display: block;
+        animation: pulse 2s infinite;
+      }
+
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.6;
+        }
+      }
+
+      .preset-buttons {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 6px;
+        margin-bottom: 10px;
+      }
+
+      .preset-btn {
+        padding: 6px;
+        background: var(--bg-tertiary);
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        color: var(--text);
+        font-family: "Rajdhani", sans-serif;
+        font-size: 0.85em;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+
+      .preset-btn:hover {
+        background: var(--accent-dim);
+        color: #000;
+        border-color: var(--accent);
+      }
+
+      .instructions {
+        background: rgba(0, 255, 136, 0.05);
+        border: 1px solid var(--accent-dim);
+        border-radius: 6px;
+        padding: 10px;
+        font-size: 0.85em;
+        line-height: 1.5;
+        color: var(--text-dim);
+      }
+
+      .instructions strong {
+        color: var(--accent);
+      }
+
+      .tab-container {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 15px;
+      }
+
+      .tab-btn {
+        flex: 1;
+        padding: 10px;
+        background: var(--bg-tertiary);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        color: var(--text-dim);
+        font-family: "Orbitron", monospace;
+        font-size: 0.9em;
+        cursor: pointer;
+        transition: all 0.3s ease;
+      }
+
+      .tab-btn.active {
+        background: var(--accent);
+        color: #000;
+        border-color: var(--accent);
+      }
+
+      .tab-content {
+        display: none;
+      }
+
+      .tab-content.active {
+        display: block;
+      }
+
+      .output-section {
+        background: var(--bg-secondary);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 15px;
+      }
+
+      .output-section h3 {
+        font-family: "Orbitron", monospace;
+        font-size: 1em;
+        color: var(--accent);
+        margin-bottom: 10px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+
+      .output-section textarea {
+        width: 100%;
+        height: 200px;
+        background: var(--bg-tertiary);
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        color: var(--text);
+        font-family: "Courier New", monospace;
+        font-size: 0.8em;
+        padding: 12px;
+        resize: vertical;
+      }
+
+      .path-list {
+        max-height: 150px;
+        overflow-y: auto;
+        background: var(--bg-tertiary);
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        padding: 8px;
+      }
+
+      .path-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 6px;
+        margin-bottom: 4px;
+        background: var(--bg-secondary);
+        border-radius: 4px;
+        font-size: 0.85em;
+      }
+
+      .path-item:hover {
+        background: rgba(0, 255, 136, 0.1);
+      }
+
+      .path-item button {
+        padding: 3px 8px;
+        background: var(--accent);
+        border: none;
+        border-radius: 3px;
+        color: #000;
+        font-size: 0.8em;
+        cursor: pointer;
+        margin-left: 5px;
+      }
+
+      .status-bar {
+        background: var(--bg-secondary);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 8px 15px;
+        text-align: center;
+        font-size: 0.85em;
+        color: var(--text-dim);
+      }
+
+      .status-bar.success {
+        color: var(--accent);
+        border-color: var(--accent);
+      }
+
+      .status-bar.error {
+        color: #ff4444;
+        border-color: #ff4444;
+      }
+
+      .mapping-display {
+        background: var(--bg-tertiary);
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        padding: 10px;
+        font-size: 0.85em;
+        line-height: 1.6;
+      }
+
+      .mapping-row {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 4px;
+        color: var(--text-dim);
+      }
+
+      .mapping-row:last-child {
+        margin-bottom: 0;
+      }
+
+      .mapping-source {
+        color: var(--text);
+      }
+
+      .mapping-target {
+        color: var(--accent);
+        font-weight: 600;
+      }
+
+      .preset-manager {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 6px;
+        margin-bottom: 8px;
+      }
+
+      .preset-manager input[type="text"] {
+        padding: 6px 10px;
+        background: var(--bg-tertiary);
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        color: var(--text);
+        font-family: "Rajdhani", sans-serif;
+        font-size: 0.9em;
+      }
+
+      @media (max-width: 1400px) {
+        .main-grid {
+          grid-template-columns: 280px 1fr;
+        }
+        .audio-panel {
+          display: none;
+        }
+      }
+
+      @media (max-width: 1200px) {
+        .main-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <h1>Dr.C - Mandelbrot Explorer <span class="version">v2.0</span></h1>
+        <div class="subtitle">
+          Complex Plane Fractals → Real-time Csound Synthesis
+        </div>
+      </header>
+
+      <div class="main-grid">
+        <!-- Controls Panel -->
+        <div class="controls-panel">
+          <!-- Dimension Selection -->
+          <div class="control-section">
+            <h3>Dimension</h3>
+            <div class="tab-container">
+              <button class="tab-btn active" onclick="switchDimension('2d')">
+                2D
+              </button>
+              <button class="tab-btn" onclick="switchDimension('3d')">
+                3D
+              </button>
+            </div>
+          </div>
+
+          <!-- 2D Controls -->
+          <div id="controls2d" class="tab-content active">
+            <div class="control-section">
+              <h3>Fractal Mode</h3>
+              <div class="control-group">
+                <label>Set Type</label>
+                <select id="mode">
+                  <option value="mandelbrot">Mandelbrot Set</option>
+                  <option value="julia">Julia Set</option>
+                </select>
+              </div>
+              <div class="instructions">
+                <strong>Mandelbrot:</strong> Click to zoom<br />
+                <strong>Julia:</strong> Click to morph C
+              </div>
+            </div>
+
+            <div class="control-section">
+              <h3>Julia Animation</h3>
+              <div class="control-group">
+                <button
+                  class="btn btn-secondary"
+                  id="animateBtn"
+                  onclick="toggleAnimation()"
+                >
+                  ▶ Start Animation
+                </button>
+              </div>
+              <div class="control-group">
+                <label
+                  >Speed
+                  <span class="value-display" id="animSpeedDisplay"
+                    >1.0</span
+                  ></label
+                >
+                <input
+                  type="range"
+                  id="animSpeed"
+                  min="0.1"
+                  max="3"
+                  step="0.1"
+                  value="1.0"
+                />
+              </div>
+              <div class="control-group">
+                <label>Pattern</label>
+                <select id="animPattern">
+                  <option value="circular">Circular</option>
+                  <option value="lissajous">Lissajous</option>
+                  <option value="spiral">Spiral</option>
+                  <option value="figure8">Figure-8</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="control-section">
+              <h3>Rendering</h3>
+              <div class="control-group">
+                <label
+                  >Max Iterations
+                  <span class="value-display" id="maxIterDisplay"
+                    >100</span
+                  ></label
+                >
+                <input
+                  type="range"
+                  id="maxIter"
+                  min="20"
+                  max="500"
+                  value="100"
+                />
+              </div>
+              <div class="control-group">
+                <label>Color Scheme</label>
+                <select id="colorScheme">
+                  <option value="classic">Classic (B&W)</option>
+                  <option value="rainbow">Rainbow</option>
+                  <option value="fire">Fire</option>
+                  <option value="ocean">Ocean</option>
+                  <option value="psychedelic">Psychedelic</option>
+                  <option value="electric">Electric</option>
+                </select>
+              </div>
+              <div class="control-group">
+                <label>Render Mode</label>
+                <select id="renderMode">
+                  <option value="cpu">CPU (Canvas 2D)</option>
+                  <option value="gpu">GPU (WebGL)</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="control-section">
+              <h3>Julia Parameters</h3>
+              <div class="control-group">
+                <label
+                  >Real (C.x)
+                  <span class="value-display" id="juliaRealDisplay"
+                    >-0.70</span
+                  ></label
+                >
+                <input
+                  type="range"
+                  id="juliaReal"
+                  min="-2"
+                  max="2"
+                  step="0.01"
+                  value="-0.70"
+                />
+              </div>
+              <div class="control-group">
+                <label
+                  >Imaginary (C.y)
+                  <span class="value-display" id="juliaImagDisplay"
+                    >0.27</span
+                  ></label
+                >
+                <input
+                  type="range"
+                  id="juliaImag"
+                  min="-2"
+                  max="2"
+                  step="0.01"
+                  value="0.27"
+                />
+              </div>
+            </div>
+
+            <div class="control-section">
+              <h3>2D Presets</h3>
+              <div class="preset-buttons">
+                <button class="preset-btn" onclick="loadPreset('mandelbrot')">
+                  Mandelbrot
+                </button>
+                <button class="preset-btn" onclick="loadPreset('julia1')">
+                  Julia 1
+                </button>
+                <button class="preset-btn" onclick="loadPreset('julia2')">
+                  Julia 2
+                </button>
+                <button class="preset-btn" onclick="loadPreset('julia3')">
+                  Julia 3
+                </button>
+                <button class="preset-btn" onclick="loadPreset('spiral')">
+                  Spiral
+                </button>
+                <button class="preset-btn" onclick="loadPreset('dendrite')">
+                  Dendrite
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 3D Controls -->
+          <div id="controls3d" class="tab-content">
+            <div class="control-section">
+              <h3>3D Fractal Type</h3>
+              <div class="control-group">
+                <label>Type</label>
+                <select id="fractal3dType">
+                  <option value="mandelbulb">Mandelbulb</option>
+                  <option value="mandelbox">Mandelbox</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="control-section">
+              <h3>3D Parameters</h3>
+              <div class="control-group">
+                <label
+                  >Power
+                  <span class="value-display" id="powerDisplay"
+                    >8.0</span
+                  ></label
+                >
+                <input
+                  type="range"
+                  id="power3d"
+                  min="2"
+                  max="16"
+                  step="0.5"
+                  value="8"
+                />
+              </div>
+              <div class="control-group">
+                <label
+                  >Iterations
+                  <span class="value-display" id="iter3dDisplay">8</span></label
+                >
+                <input type="range" id="iter3d" min="4" max="16" value="8" />
+              </div>
+              <div class="control-group">
+                <label
+                  >Bailout
+                  <span class="value-display" id="bailoutDisplay"
+                    >2.0</span
+                  ></label
+                >
+                <input
+                  type="range"
+                  id="bailout3d"
+                  min="1"
+                  max="10"
+                  step="0.5"
+                  value="2"
+                />
+              </div>
+            </div>
+
+            <div class="control-section">
+              <h3>Camera</h3>
+              <div class="control-group">
+                <label
+                  >Distance
+                  <span class="value-display" id="camDistDisplay"
+                    >3.0</span
+                  ></label
+                >
+                <input
+                  type="range"
+                  id="camDist"
+                  min="1.5"
+                  max="8"
+                  step="0.1"
+                  value="3"
+                />
+              </div>
+              <div class="control-group">
+                <button
+                  class="btn btn-secondary btn-small"
+                  onclick="toggleRotation()"
+                >
+                  🔄 Auto-Rotate
+                </button>
+              </div>
+            </div>
+
+            <div class="control-section">
+              <h3>3D Presets</h3>
+              <div class="preset-buttons">
+                <button class="preset-btn" onclick="load3DPreset('bulb8')">
+                  Bulb Power 8
+                </button>
+                <button class="preset-btn" onclick="load3DPreset('bulb9')">
+                  Bulb Power 9
+                </button>
+                <button class="preset-btn" onclick="load3DPreset('box')">
+                  Mandelbox
+                </button>
+                <button class="preset-btn" onclick="load3DPreset('detailed')">
+                  High Detail
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Path Recording (Collapsible) -->
+          <div class="control-section collapsible collapsed">
+            <h3>Path Recording</h3>
+            <div class="control-group">
+              <button
+                class="btn btn-secondary"
+                id="recordBtn"
+                onclick="toggleRecording()"
+              >
+                ⏺ Start Recording
+              </button>
+            </div>
+            <div class="path-list" id="pathList">
+              <div
+                style="
+                  text-align: center;
+                  color: var(--text-dim);
+                  font-size: 0.85em;
+                  padding: 20px;
+                "
+              >
+                No recorded paths
+              </div>
+            </div>
+          </div>
+
+          <!-- Actions -->
+          <div class="control-section">
+            <h3>Actions</h3>
+            <button class="btn btn-secondary" onclick="resetView()">
+              Reset View
+            </button>
+            <button class="btn btn-secondary" onclick="downloadImage()">
+              💾 Save Image
+            </button>
+          </div>
+        </div>
+
+        <!-- Canvas Container -->
+        <div class="canvas-container">
+          <canvas id="fractalCanvas2D" width="1024" height="768"></canvas>
+          <canvas id="fractalCanvas3D" style="display: none"></canvas>
+
+          <div class="info-overlay" id="infoOverlay">
+            <div>Zoom: <span id="zoomLevel">1.0</span>x</div>
+            <div>Center: <span id="centerCoords">0.0, 0.0</span></div>
+            <div id="renderTime">Render: 0ms</div>
+          </div>
+
+          <div class="mode-indicator" id="modeIndicator">Mandelbrot</div>
+          <div class="audio-indicator" id="audioIndicator">♪ Audio Playing</div>
+        </div>
+
+        <!-- Audio Controls Panel -->
+        <div class="audio-panel">
+          <!-- Csound Engine -->
+          <div class="control-section">
+            <h3>Csound Engine</h3>
+            <div class="control-group">
+              <button class="btn" id="initAudioBtn" onclick="initCsound()">
+                🔊 Initialize Csound
+              </button>
+            </div>
+            <div class="control-group">
+              <button
+                class="btn btn-secondary"
+                id="playAudioBtn"
+                onclick="toggleAudio()"
+                disabled
+              >
+                ▶ Play Audio
+              </button>
+            </div>
+          </div>
+
+          <!-- Synthesis Type -->
+          <div class="control-section">
+            <h3>Synthesis Type</h3>
+            <div class="control-group">
+              <label>Algorithm</label>
+              <select id="synthType" disabled>
+                <option value="pluck">Pluck (Karplus-Strong)</option>
+                <option value="fm">FM Bell</option>
+                <option value="additive">Additive Bell</option>
+                <option value="clarinet">Clarinet</option>
+                <option value="organ">Organ</option>
+                <option value="granular">Granular</option>
+                <option value="noise">Filtered Noise</option>
+                <option value="subtractive">Subtractive (Moog Filter)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Musical Parameters -->
+          <div class="control-section">
+            <h3>Musical Parameters</h3>
+            <div class="control-group">
+              <label
+                >Tempo (BPM)
+                <span class="value-display" id="tempoDisplay">120</span></label
+              >
+              <input
+                type="range"
+                id="tempo"
+                min="30"
+                max="300"
+                value="120"
+                disabled
+              />
+            </div>
+            <div class="control-group">
+              <label
+                >Base Frequency (Hz)
+                <span class="value-display" id="baseFreqDisplay"
+                  >220</span
+                ></label
+              >
+              <input
+                type="range"
+                id="baseFreq"
+                min="55"
+                max="880"
+                value="220"
+                disabled
+              />
+            </div>
+            <div class="control-group">
+              <label
+                >Pitch Range (Octaves)
+                <span class="value-display" id="pitchRangeDisplay"
+                  >2.0</span
+                ></label
+              >
+              <input
+                type="range"
+                id="pitchRange"
+                min="0.5"
+                max="4"
+                step="0.5"
+                value="2"
+                disabled
+              />
+            </div>
+            <div class="control-group">
+              <label
+                >Note Density (%)
+                <span class="value-display" id="noteDensityDisplay"
+                  >50</span
+                ></label
+              >
+              <input
+                type="range"
+                id="noteDensity"
+                min="10"
+                max="100"
+                value="50"
+                disabled
+              />
+            </div>
+            <div class="control-group">
+              <label
+                >Duration Scale
+                <span class="value-display" id="durationScaleDisplay"
+                  >1.0</span
+                ></label
+              >
+              <input
+                type="range"
+                id="durationScale"
+                min="0.1"
+                max="3"
+                step="0.1"
+                value="1.0"
+                disabled
+              />
+            </div>
+          </div>
+
+          <!-- Parameter Mapping -->
+          <div class="control-section">
+            <h3>Parameter Mapping</h3>
+            <div class="control-group">
+              <label>Iteration Count →</label>
+              <select id="iterMap" disabled>
+                <option value="pitch" selected>Pitch</option>
+                <option value="amplitude">Amplitude</option>
+                <option value="brightness">Brightness</option>
+                <option value="duration">Duration</option>
+              </select>
+            </div>
+            <div class="control-group">
+              <label>X Position →</label>
+              <select id="xMap" disabled>
+                <option value="pan" selected>Pan</option>
+                <option value="pitch">Pitch</option>
+                <option value="brightness">Brightness</option>
+              </select>
+            </div>
+            <div class="control-group">
+              <label>Y Position →</label>
+              <select id="yMap" disabled>
+                <option value="duration" selected>Duration</option>
+                <option value="amplitude">Amplitude</option>
+                <option value="brightness">Brightness</option>
+              </select>
+            </div>
+            <div class="mapping-display" id="mappingDisplay">
+              <div class="mapping-row">
+                <span class="mapping-source">Iteration Count</span>
+                <span class="mapping-target" id="iterMapVal">→ Pitch</span>
+              </div>
+              <div class="mapping-row">
+                <span class="mapping-source">X Position</span>
+                <span class="mapping-target" id="xMapVal">→ Pan</span>
+              </div>
+              <div class="mapping-row">
+                <span class="mapping-source">Y Position</span>
+                <span class="mapping-target" id="yMapVal">→ Duration</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Envelope & Effects -->
+          <div class="control-section">
+            <h3>Envelope & Effects</h3>
+            <div class="control-group">
+              <label
+                >Attack (ms)
+                <span class="value-display" id="attackDisplay">10</span></label
+              >
+              <input
+                type="range"
+                id="attack"
+                min="1"
+                max="500"
+                value="10"
+                disabled
+              />
+            </div>
+            <div class="control-group">
+              <label
+                >Release (ms)
+                <span class="value-display" id="releaseDisplay"
+                  >100</span
+                ></label
+              >
+              <input
+                type="range"
+                id="release"
+                min="10"
+                max="2000"
+                value="100"
+                disabled
+              />
+            </div>
+            <div class="control-group">
+              <label
+                >Master Volume (%)
+                <span class="value-display" id="volumeDisplay">70</span></label
+              >
+              <input
+                type="range"
+                id="masterVolume"
+                min="0"
+                max="100"
+                value="70"
+                disabled
+              />
+            </div>
+            <div class="control-group">
+              <label
+                >Reverb Mix (%)
+                <span class="value-display" id="reverbDisplay">30</span></label
+              >
+              <input
+                type="range"
+                id="reverbMix"
+                min="0"
+                max="100"
+                value="30"
+                disabled
+              />
+            </div>
+          </div>
+
+          <!-- Audio Presets -->
+          <div class="control-section">
+            <h3>Audio Presets</h3>
+            <div class="preset-manager">
+              <input
+                type="text"
+                id="presetName"
+                placeholder="Preset name..."
+                disabled
+              />
+              <button class="btn btn-small" id="savePresetBtn" disabled>
+                Save
+              </button>
+            </div>
+            <div class="control-group">
+              <label>Load Preset</label>
+              <select id="loadPreset" disabled>
+                <option value="">-- Select Preset --</option>
+              </select>
+            </div>
+            <div class="control-group">
+              <button
+                class="btn btn-secondary btn-small"
+                id="loadPresetBtn"
+                disabled
+              >
+                Load Preset
+              </button>
+            </div>
+          </div>
+
+          <!-- Export -->
+          <div class="control-section">
+            <h3>Export</h3>
+            <button class="btn" onclick="generateCsound()">
+              Generate .CSD File
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Output Section -->
+      <div class="output-section">
+        <h3>Csound Score Output</h3>
+        <textarea
+          id="csoundOutput"
+          placeholder="Generated Csound .csd file will appear here...
+
+Features:
+- Real-time audio synthesis via Csound WASM
+- Click 'Initialize Csound' to start the audio engine
+- Click 'Play Audio' to hear the fractal sonified in real-time
+- Click 'Generate .CSD File' to export a complete Csound composition
+
+The fractal maps to sound:
+- Iteration count → Pitch
+- Position → Stereo panning
+- Escape time → Note duration
+- Density → Amplitude"
+        ></textarea>
+      </div>
+
+      <!-- Status Bar -->
+      <div class="status-bar" id="statusBar">
+        Ready - Select a fractal mode and explore
+      </div>
+    </div>
+
+    <script type="module">
+      // ============================================================================
+      // CSOUND WASM INITIALIZATION
+      // ============================================================================
+
+      let Csound = null;
+      let csound = null;
+      let csoundReady = false;
+      let audioPlaying = false;
+
+      window.initCsound = async function () {
+        try {
+          console.log("Starting Csound initialization...");
+          updateStatus("Loading Csound WASM v7...", "success");
+
+          // Load Csound from CDN
+          console.log("Importing Csound module from CDN...");
+          const { Csound: CsoundModule } = await import(
+            "https://cdn.jsdelivr.net/npm/@csound/browser@7.0.0-beta26/dist/csound.js"
+          );
+
+          console.log("Csound module loaded, creating instance...");
+          Csound = CsoundModule;
+          csound = await Csound({});
+          console.log("Csound instance created");
+
+          // Compile orchestra (Csound 6 compatible)
+          const orchestra = `
+sr = 44100
+ksmps = 32
+nchnls = 2
+0dbfs = 1
+
+; Global audio buses
+gaReverb init 0
+
+; Instrument 1: Pluck (Karplus-Strong)
+instr 1
+  iFreq = p4
+  iAmp = p5
+  iPan = p6
+  iBright = p7
+  iAtk = p8 / 1000
+  iRel = p9 / 1000
+  
+  kMasterVol chnget "masterVol"
+  kReverbMix chnget "reverbMix"
+  
+  kEnv linsegr 0, iAtk, iAmp, iRel, 0
+  aSig pluck kEnv, iFreq, iFreq, 0, 1
+  
+  kCutoff = 500 + iBright * 3000
+  aSig tone aSig, kCutoff
+  
+  aL, aR pan2 aSig, iPan
+  gaReverb = gaReverb + (aL + aR) * 0.5 * kReverbMix
+  out aL * kMasterVol, aR * kMasterVol
+endin
+
+; Instrument 2: FM Bell
+instr 2
+  iFreq = p4
+  iAmp = p5
+  iPan = p6
+  iBright = p7
+  iAtk = p8 / 1000
+  iRel = p9 / 1000
+  
+  kMasterVol chnget "masterVol"
+  kReverbMix chnget "reverbMix"
+  
+  kEnv = linsegr:k(0, iAtk, iAmp, iRel, 0)
+  kModIdx = 2 + iBright * 4
+  aSig = foscili:a(kEnv, iFreq, 1, 2.5, kModIdx, -1)
+  
+  aL, aR = pan2(aSig, iPan)
+  gaReverb = gaReverb + (aL + aR) * 0.5 * kReverbMix
+  out(aL * kMasterVol, aR * kMasterVol)
+endin
+
+; Instrument 3: Additive Bell
+instr 3
+  iFreq = p4
+  iAmp = p5
+  iPan = p6
+  iBright = p7
+  iAtk = p8 / 1000
+  iRel = p9 / 1000
+  
+  kMasterVol chnget "masterVol"
+  kReverbMix chnget "reverbMix"
+  
+  kEnv = linsegr:k(0, iAtk, iAmp, iRel, 0)
+  a1 = oscili:a(kEnv, iFreq, -1)
+  a2 = oscili:a(kEnv * 0.5, iFreq * 2.76, -1)
+  a3 = oscili:a(kEnv * 0.3 * iBright, iFreq * 5.4, -1)
+  a4 = oscili:a(kEnv * 0.2 * iBright, iFreq * 8.93, -1)
+  aSig = (a1 + a2 + a3 + a4) * 0.4
+  
+  aL, aR = pan2(aSig, iPan)
+  gaReverb = gaReverb + (aL + aR) * 0.5 * kReverbMix
+  out(aL * kMasterVol, aR * kMasterVol)
+endin
+
+; Instrument 4: Clarinet
+instr 4
+  iFreq = p4
+  iAmp = p5
+  iPan = p6
+  iBright = p7
+  iAtk = p8 / 1000
+  iRel = p9 / 1000
+  
+  kMasterVol chnget "masterVol"
+  kReverbMix chnget "reverbMix"
+  
+  kEnv = linsegr:k(0, iAtk, iAmp, iRel, 0)
+  a1 = oscili:a(kEnv, iFreq, -1)
+  a2 = oscili:a(kEnv * 0.3 * iBright, iFreq * 3, -1)
+  a3 = oscili:a(kEnv * 0.15 * iBright, iFreq * 5, -1)
+  aSig = (a1 + a2 + a3) * 0.5
+  
+  aL, aR = pan2(aSig, iPan)
+  gaReverb = gaReverb + (aL + aR) * 0.5 * kReverbMix
+  out(aL * kMasterVol, aR * kMasterVol)
+endin
+
+; Instrument 5: Organ
+instr 5
+  iFreq = p4
+  iAmp = p5
+  iPan = p6
+  iBright = p7
+  iAtk = p8 / 1000
+  iRel = p9 / 1000
+  
+  kMasterVol chnget "masterVol"
+  kReverbMix chnget "reverbMix"
+  
+  kEnv = linsegr:k(0, iAtk, iAmp, iRel, 0)
+  a1 = oscili:a(kEnv * 0.3, iFreq, -1)
+  a2 = oscili:a(kEnv * 0.3, iFreq * 2, -1)
+  a3 = oscili:a(kEnv * 0.2 * iBright, iFreq * 3, -1)
+  a4 = oscili:a(kEnv * 0.15 * iBright, iFreq * 4, -1)
+  aSig = (a1 + a2 + a3 + a4) * 0.4
+  
+  aL, aR = pan2(aSig, iPan)
+  gaReverb = gaReverb + (aL + aR) * 0.5 * kReverbMix
+  out(aL * kMasterVol, aR * kMasterVol)
+endin
+
+; Instrument 6: Granular
+instr 6
+  iFreq = p4
+  iAmp = p5
+  iPan = p6
+  iBright = p7
+  iAtk = p8 / 1000
+  iRel = p9 / 1000
+  
+  kMasterVol chnget "masterVol"
+  kReverbMix chnget "reverbMix"
+  
+  kEnv = linsegr:k(0, iAtk, iAmp, iRel, 0)
+  kDens = 10 + iBright * 40
+  kGrainSize = 0.01 + iBright * 0.05
+  aSig = grain3:a(iFreq, 0, 1, 0, kGrainSize, kDens, 100, -1, -1, 0)
+  aSig = aSig * kEnv * 0.3
+  
+  aL, aR = pan2(aSig, iPan)
+  gaReverb = gaReverb + (aL + aR) * 0.5 * kReverbMix
+  out(aL * kMasterVol, aR * kMasterVol)
+endin
+
+; Instrument 7: Filtered Noise
+instr 7
+  iFreq = p4
+  iAmp = p5
+  iPan = p6
+  iBright = p7
+  iAtk = p8 / 1000
+  iRel = p9 / 1000
+  
+  kMasterVol chnget "masterVol"
+  kReverbMix chnget "reverbMix"
+  
+  kEnv = linsegr:k(0, iAtk, iAmp, iRel, 0)
+  aSig = noise:a(kEnv * 2, 0)
+  kCf = iFreq * (1 + iBright * 2)
+  aSig = butterbp(aSig, kCf, kCf * 0.1)
+  
+  aL, aR = pan2(aSig, iPan)
+  gaReverb = gaReverb + (aL + aR) * 0.5 * kReverbMix
+  out(aL * kMasterVol, aR * kMasterVol)
+endin
+
+; Instrument 8: Subtractive (Moog Filter)
+instr 8
+  iFreq = p4
+  iAmp = p5
+  iPan = p6
+  iBright = p7
+  iAtk = p8 / 1000
+  iRel = p9 / 1000
+  
+  kMasterVol chnget "masterVol"
+  kReverbMix chnget "reverbMix"
+  
+  kEnv = linsegr:k(0, iAtk, iAmp, iRel, 0)
+  aSig = vco2:a(kEnv, iFreq, 0)
+  kCutoff = iFreq * (2 + iBright * 4)
+  aSig = moogladder:a(aSig, kCutoff, 0.3)
+  
+  aL, aR = pan2(aSig, iPan)
+  gaReverb = gaReverb + (aL + aR) * 0.5 * kReverbMix
+  out(aL * kMasterVol, aR * kMasterVol)
+endin
+
+; Instrument 999: Reverb
+instr 999
+  kMasterVol chnget "masterVol"
+  aL, aR = freeverb(gaReverb, gaReverb, 0.85, 0.7)
+  out(aL * kMasterVol, aR * kMasterVol)
+  gaReverb = 0
+endin
+`;
+
+          console.log("Compiling orchestra...");
+          await csound.compileOrc(orchestra);
+          console.log("Orchestra compiled successfully");
+
+          // Compile ftable for gbuzz
+          console.log("Creating function table for gbuzz...");
+          await csound.evalCode("f1 0 16384 10 1");
+          console.log("Function table created");
+
+          console.log("Setting audio output option...");
+          await csound.setOption("-odac");
+
+          console.log("Starting Csound performance...");
+          await csound.start();
+          console.log("Csound performance started");
+
+          // Initialize control channels
+          console.log("Initializing control channels...");
+          await csound.setControlChannel("masterVol", 0.7);
+          await csound.setControlChannel("reverbMix", 0.3);
+          console.log("Control channels initialized");
+
+          // Start reverb instrument
+          console.log("Starting reverb instrument...");
+          await csound.inputMessage("i 999 0 -1");
+          console.log("Reverb instrument started");
+
+          csoundReady = true;
+          console.log("Csound is ready!");
+
+          // Enable audio controls
+          document.getElementById("initAudioBtn").disabled = true;
+          document.getElementById("playAudioBtn").disabled = false;
+          document.getElementById("masterVolume").disabled = false;
+          document.getElementById("reverbMix").disabled = false;
+
+          // Enable new audio parameter controls
+          document.getElementById("synthType").disabled = false;
+          document.getElementById("tempo").disabled = false;
+          document.getElementById("baseFreq").disabled = false;
+          document.getElementById("pitchRange").disabled = false;
+          document.getElementById("noteDensity").disabled = false;
+          document.getElementById("durationScale").disabled = false;
+          document.getElementById("attack").disabled = false;
+          document.getElementById("release").disabled = false;
+          document.getElementById("iterMap").disabled = false;
+          document.getElementById("xMap").disabled = false;
+          document.getElementById("yMap").disabled = false;
+          document.getElementById("presetName").disabled = false;
+          document.getElementById("savePresetBtn").disabled = false;
+          document.getElementById("loadPreset").disabled = false;
+          document.getElementById("loadPresetBtn").disabled = false;
+
+          updateStatus(
+            "Csound WASM ready! Click 'Play Audio' to start.",
+            "success",
+          );
+
+          // Get audio context info
+          const audioContext = await csound.getAudioContext();
+          console.log("Audio Context State:", audioContext.state);
+          console.log("Sample Rate:", await csound.getSr());
+          console.log("Ksmps:", await csound.getKsmps());
+        } catch (err) {
+          console.error("Csound initialization failed:", err);
+          console.error("Error stack:", err.stack);
+          updateStatus("Csound initialization failed: " + err.message, "error");
+        }
+      };
+
+      // Update Csound control channels
+      window.updateCsoundControls = async function () {
+        if (!csoundReady) return;
+
+        const volume =
+          parseInt(document.getElementById("masterVolume").value) / 100;
+        const reverb =
+          parseInt(document.getElementById("reverbMix").value) / 100;
+
+        await csound.setControlChannel("masterVol", volume);
+        await csound.setControlChannel("reverbMix", reverb);
+      };
+
+      // Setup audio control listeners
+      document
+        .getElementById("masterVolume")
+        .addEventListener("input", async (e) => {
+          document.getElementById("volumeDisplay").textContent = e.target.value;
+          await updateCsoundControls();
+        });
+
+      document
+        .getElementById("reverbMix")
+        .addEventListener("input", async (e) => {
+          document.getElementById("reverbDisplay").textContent = e.target.value;
+          await updateCsoundControls();
+        });
+
+      // Setup new audio parameter listeners
+      document.getElementById("synthType").addEventListener("change", (e) => {
+        updateStatus(`Synthesis type: ${e.target.value}`, "success");
+      });
+
+      document.getElementById("tempo").addEventListener("input", (e) => {
+        document.getElementById("tempoDisplay").textContent = e.target.value;
+      });
+
+      document.getElementById("baseFreq").addEventListener("input", (e) => {
+        document.getElementById("baseFreqDisplay").textContent = e.target.value;
+      });
+
+      document.getElementById("pitchRange").addEventListener("input", (e) => {
+        document.getElementById("pitchRangeDisplay").textContent = parseFloat(
+          e.target.value,
+        ).toFixed(1);
+      });
+
+      document.getElementById("noteDensity").addEventListener("input", (e) => {
+        document.getElementById("noteDensityDisplay").textContent =
+          e.target.value;
+      });
+
+      document
+        .getElementById("durationScale")
+        .addEventListener("input", (e) => {
+          document.getElementById("durationScaleDisplay").textContent =
+            parseFloat(e.target.value).toFixed(1);
+        });
+
+      document.getElementById("attack").addEventListener("input", (e) => {
+        document.getElementById("attackDisplay").textContent = e.target.value;
+      });
+
+      document.getElementById("release").addEventListener("input", (e) => {
+        document.getElementById("releaseDisplay").textContent = e.target.value;
+      });
+
+      // Parameter mapping listeners
+      document.getElementById("iterMap").addEventListener("change", () => {
+        updateMappingDisplay();
+      });
+
+      document.getElementById("xMap").addEventListener("change", () => {
+        updateMappingDisplay();
+      });
+
+      document.getElementById("yMap").addEventListener("change", () => {
+        updateMappingDisplay();
+      });
+
+      // Mapping display update function
+      function updateMappingDisplay() {
+        const iterMap = document.getElementById("iterMap").value;
+        const xMap = document.getElementById("xMap").value;
+        const yMap = document.getElementById("yMap").value;
+
+        function capitalize(str) {
+          return str.charAt(0).toUpperCase() + str.slice(1);
+        }
+
+        document.getElementById("iterMapVal").textContent =
+          "→ " + capitalize(iterMap);
+        document.getElementById("xMapVal").textContent =
+          "→ " + capitalize(xMap);
+        document.getElementById("yMapVal").textContent =
+          "→ " + capitalize(yMap);
+      }
+
+      // ============================================================================
+      // FRACTAL RENDERING - 2D
+      // ============================================================================
+
+      const canvas2D = document.getElementById("fractalCanvas2D");
+      const ctx2D = canvas2D.getContext("2d");
+
+      let config = {
+        dimension: "2d",
+        mode: "mandelbrot",
+        centerX: -0.5,
+        centerY: 0.0,
+        zoom: 1.0,
+        maxIter: 100,
+        escapeRadius: 2.0,
+        juliaReal: -0.7,
+        juliaImag: 0.27,
+        colorScheme: "classic",
+        renderMode: "cpu",
+
+        // 3D
+        fractal3dType: "mandelbulb",
+        power3d: 8,
+        iter3d: 8,
+        bailout3d: 2,
+        camDist: 3,
+
+        // Animation
+        animating: false,
+        animSpeed: 1.0,
+        animPattern: "circular",
+        animTime: 0,
+
+        // Recording
+        recording: false,
+        currentPath: [],
+        savedPaths: [],
+      };
+
+      let fractalData = [];
+      let webglRenderer = null;
+
+      // Initialize
+      function init() {
+        setupEventListeners();
+        setupCollapsibleSections();
+        render2D();
+      }
+
+      // Setup collapsible sections
+      function setupCollapsibleSections() {
+        document
+          .querySelectorAll(".control-section.collapsible h3")
+          .forEach((header) => {
+            header.addEventListener("click", function () {
+              this.parentElement.classList.toggle("collapsed");
+            });
+          });
+      }
+
+      // Event listeners
+      function setupEventListeners() {
+        // Canvas click
+        canvas2D.addEventListener("click", handleCanvasClick);
+
+        // Mode change
+        document.getElementById("mode").addEventListener("change", (e) => {
+          config.mode = e.target.value;
+          updateModeIndicator();
+          render2D();
+        });
+
+        // Max iterations
+        document.getElementById("maxIter").addEventListener("input", (e) => {
+          config.maxIter = parseInt(e.target.value);
+          document.getElementById("maxIterDisplay").textContent =
+            config.maxIter;
+          render2D();
+        });
+
+        // Julia parameters
+        document.getElementById("juliaReal").addEventListener("input", (e) => {
+          config.juliaReal = parseFloat(e.target.value);
+          document.getElementById("juliaRealDisplay").textContent =
+            config.juliaReal.toFixed(2);
+          if (config.mode === "julia") render2D();
+        });
+
+        document.getElementById("juliaImag").addEventListener("input", (e) => {
+          config.juliaImag = parseFloat(e.target.value);
+          document.getElementById("juliaImagDisplay").textContent =
+            config.juliaImag.toFixed(2);
+          if (config.mode === "julia") render2D();
+        });
+
+        // Color scheme
+        document
+          .getElementById("colorScheme")
+          .addEventListener("change", (e) => {
+            config.colorScheme = e.target.value;
+            render2D();
+          });
+
+        // Render mode
+        document
+          .getElementById("renderMode")
+          .addEventListener("change", (e) => {
+            config.renderMode = e.target.value;
+            if (config.renderMode === "gpu") {
+              initWebGL();
+            }
+            render2D();
+          });
+
+        // Animation speed
+        document.getElementById("animSpeed").addEventListener("input", (e) => {
+          config.animSpeed = parseFloat(e.target.value);
+          document.getElementById("animSpeedDisplay").textContent =
+            config.animSpeed.toFixed(1);
+        });
+
+        // Animation pattern
+        document
+          .getElementById("animPattern")
+          .addEventListener("change", (e) => {
+            config.animPattern = e.target.value;
+          });
+
+        // 3D controls
+        document
+          .getElementById("fractal3dType")
+          .addEventListener("change", (e) => {
+            config.fractal3dType = e.target.value;
+            render3D();
+          });
+
+        document.getElementById("power3d").addEventListener("input", (e) => {
+          config.power3d = parseFloat(e.target.value);
+          document.getElementById("powerDisplay").textContent =
+            config.power3d.toFixed(1);
+          render3D();
+        });
+
+        document.getElementById("iter3d").addEventListener("input", (e) => {
+          config.iter3d = parseInt(e.target.value);
+          document.getElementById("iter3dDisplay").textContent = config.iter3d;
+          render3D();
+        });
+
+        document.getElementById("bailout3d").addEventListener("input", (e) => {
+          config.bailout3d = parseFloat(e.target.value);
+          document.getElementById("bailoutDisplay").textContent =
+            config.bailout3d.toFixed(1);
+          render3D();
+        });
+
+        document.getElementById("camDist").addEventListener("input", (e) => {
+          config.camDist = parseFloat(e.target.value);
+          document.getElementById("camDistDisplay").textContent =
+            config.camDist.toFixed(1);
+          render3D();
+        });
+      }
+
+      // Handle canvas click
+      function handleCanvasClick(e) {
+        if (config.dimension !== "2d") return;
+
+        const rect = canvas2D.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+
+        // Scale to canvas coordinates
+        const canvasX = (x / rect.width) * canvas2D.width;
+        const canvasY = (y / rect.height) * canvas2D.height;
+
+        // Convert pixel coordinates to complex plane
+        const re = pixelToRe(canvasX);
+        const im = pixelToIm(canvasY);
+
+        if (config.mode === "mandelbrot") {
+          // Zoom into clicked point
+          config.centerX = re;
+          config.centerY = im;
+          config.zoom *= 2;
+          render2D();
+        } else {
+          // Update Julia set parameter
+          config.juliaReal = re;
+          config.juliaImag = im;
+          document.getElementById("juliaReal").value = re;
+          document.getElementById("juliaImag").value = im;
+          document.getElementById("juliaRealDisplay").textContent =
+            re.toFixed(2);
+          document.getElementById("juliaImagDisplay").textContent =
+            im.toFixed(2);
+          render2D();
+        }
+
+        // Record if recording
+        if (config.recording) {
+          config.currentPath.push({
+            mode: config.mode,
+            centerX: config.centerX,
+            centerY: config.centerY,
+            zoom: config.zoom,
+            juliaReal: config.juliaReal,
+            juliaImag: config.juliaImag,
+            timestamp: Date.now(),
+          });
+        }
+      }
+
+      // Coordinate conversion
+      function pixelToRe(x) {
+        const width = canvas2D.width;
+        const scale = 4.0 / config.zoom;
+        return config.centerX + (x - width / 2) * (scale / width);
+      }
+
+      function pixelToIm(y) {
+        const height = canvas2D.height;
+        const scale = 4.0 / config.zoom;
+        return config.centerY + (y - height / 2) * (scale / height);
+      }
+
+      // Mandelbrot iteration
+      function mandelbrot(x0, y0) {
+        let x = 0,
+          y = 0;
+        let iteration = 0;
+        const r2 = config.escapeRadius * config.escapeRadius;
+
+        while (x * x + y * y <= r2 && iteration < config.maxIter) {
+          const xTemp = x * x - y * y + x0;
+          y = 2 * x * y + y0;
+          x = xTemp;
+          iteration++;
+        }
+
+        // Smooth coloring
+        if (iteration < config.maxIter) {
+          const log_zn = Math.log(x * x + y * y) / 2;
+          const nu = Math.log(log_zn / Math.log(2)) / Math.log(2);
+          iteration = iteration + 1 - nu;
+        }
+
+        return iteration;
+      }
+
+      // Julia set iteration
+      function julia(x0, y0) {
+        let x = x0,
+          y = y0;
+        let iteration = 0;
+        const r2 = config.escapeRadius * config.escapeRadius;
+
+        while (x * x + y * y <= r2 && iteration < config.maxIter) {
+          const xTemp = x * x - y * y + config.juliaReal;
+          y = 2 * x * y + config.juliaImag;
+          x = xTemp;
+          iteration++;
+        }
+
+        // Smooth coloring
+        if (iteration < config.maxIter) {
+          const log_zn = Math.log(x * x + y * y) / 2;
+          const nu = Math.log(log_zn / Math.log(2)) / Math.log(2);
+          iteration = iteration + 1 - nu;
+        }
+
+        return iteration;
+      }
+
+      // Color mapping
+      function getColor(iteration) {
+        if (iteration >= config.maxIter) {
+          return [0, 0, 0]; // Inside set
+        }
+
+        const t = iteration / config.maxIter;
+
+        switch (config.colorScheme) {
+          case "classic":
+            const val = Math.floor(255 * t);
+            return [val, val, val];
+
+          case "rainbow":
+            return hsvToRgb((t * 360) % 360, 1, 1);
+
+          case "fire":
+            return [
+              Math.floor(255 * Math.min(1, t * 2)),
+              Math.floor(255 * Math.max(0, t * 2 - 0.5)),
+              Math.floor(50 * t),
+            ];
+
+          case "ocean":
+            return [
+              Math.floor(100 * t),
+              Math.floor(150 * t),
+              Math.floor(255 * Math.sqrt(t)),
+            ];
+
+          case "psychedelic":
+            return [
+              Math.floor(128 + 127 * Math.sin(t * Math.PI * 4)),
+              Math.floor(128 + 127 * Math.sin(t * Math.PI * 6 + 2)),
+              Math.floor(128 + 127 * Math.sin(t * Math.PI * 8 + 4)),
+            ];
+
+          case "electric":
+            return [
+              Math.floor(255 * Math.pow(t, 0.5)),
+              Math.floor(255 * Math.pow(t, 2)),
+              Math.floor(255 * Math.sin(t * Math.PI)),
+            ];
+
+          default:
+            return [255, 255, 255];
+        }
+      }
+
+      // HSV to RGB conversion
+      function hsvToRgb(h, s, v) {
+        const c = v * s;
+        const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
+        const m = v - c;
+
+        let r, g, b;
+        if (h < 60) [r, g, b] = [c, x, 0];
+        else if (h < 120) [r, g, b] = [x, c, 0];
+        else if (h < 180) [r, g, b] = [0, c, x];
+        else if (h < 240) [r, g, b] = [0, x, c];
+        else if (h < 300) [r, g, b] = [x, 0, c];
+        else [r, g, b] = [c, 0, x];
+
+        return [
+          Math.floor((r + m) * 255),
+          Math.floor((g + m) * 255),
+          Math.floor((b + m) * 255),
+        ];
+      }
+
+      // Render fractal (CPU mode)
+      function render2D() {
+        if (config.renderMode === "gpu" && webglRenderer) {
+          renderWebGL();
+          return;
+        }
+
+        const startTime = performance.now();
+        const width = canvas2D.width;
+        const height = canvas2D.height;
+        const imageData = ctx2D.createImageData(width, height);
+        fractalData = [];
+
+        for (let py = 0; py < height; py++) {
+          for (let px = 0; px < width; px++) {
+            const re = pixelToRe(px);
+            const im = pixelToIm(py);
+
+            const iteration =
+              config.mode === "mandelbrot" ? mandelbrot(re, im) : julia(re, im);
+
+            const [r, g, b] = getColor(iteration);
+            const idx = (py * width + px) * 4;
+
+            imageData.data[idx] = r;
+            imageData.data[idx + 1] = g;
+            imageData.data[idx + 2] = b;
+            imageData.data[idx + 3] = 255;
+
+            // Sample data for audio (downsample)
+            if (px % 10 === 0 && py % 10 === 0) {
+              fractalData.push({
+                x: px,
+                y: py,
+                re: re,
+                im: im,
+                iter: iteration,
+              });
+            }
+          }
+        }
+
+        ctx2D.putImageData(imageData, 0, 0);
+
+        const renderTime = Math.round(performance.now() - startTime);
+        document.getElementById("renderTime").textContent =
+          `Render: ${renderTime}ms`;
+
+        updateInfo();
+      }
+
+      // Update info overlay
+      function updateInfo() {
+        document.getElementById("zoomLevel").textContent =
+          config.zoom.toFixed(2);
+        document.getElementById("centerCoords").textContent =
+          config.centerX.toFixed(4) + ", " + config.centerY.toFixed(4);
+      }
+
+      function updateModeIndicator() {
+        const indicator = document.getElementById("modeIndicator");
+        if (config.dimension === "2d") {
+          indicator.textContent =
+            config.mode === "mandelbrot" ? "Mandelbrot" : "Julia Set";
+        } else {
+          indicator.textContent =
+            config.fractal3dType === "mandelbulb" ? "Mandelbulb" : "Mandelbox";
+        }
+      }
+
+      // ============================================================================
+      // ANIMATION
+      // ============================================================================
+
+      window.toggleAnimation = function () {
+        config.animating = !config.animating;
+        const btn = document.getElementById("animateBtn");
+
+        if (config.animating) {
+          btn.textContent = "⏸ Stop Animation";
+          btn.classList.remove("btn-secondary");
+          btn.classList.add("btn");
+          animationLoop();
+        } else {
+          btn.textContent = "▶ Start Animation";
+          btn.classList.add("btn-secondary");
+          btn.classList.remove("btn");
+        }
+      };
+
+      function animationLoop() {
+        if (!config.animating) return;
+
+        config.animTime += 0.016 * config.animSpeed; // ~60fps
+
+        // Update Julia parameters based on pattern
+        switch (config.animPattern) {
+          case "circular":
+            config.juliaReal = Math.cos(config.animTime) * 0.7;
+            config.juliaImag = Math.sin(config.animTime) * 0.7;
+            break;
+
+          case "lissajous":
+            config.juliaReal = Math.cos(config.animTime * 2) * 0.8;
+            config.juliaImag = Math.sin(config.animTime * 3) * 0.8;
+            break;
+
+          case "spiral":
+            const radius = 0.3 + (config.animTime % 4) * 0.1;
+            config.juliaReal = Math.cos(config.animTime) * radius;
+            config.juliaImag = Math.sin(config.animTime) * radius;
+            break;
+
+          case "figure8":
+            config.juliaReal = Math.cos(config.animTime) * 0.7;
+            config.juliaImag = Math.sin(config.animTime * 2) * 0.5;
+            break;
+        }
+
+        // Update UI
+        document.getElementById("juliaReal").value = config.juliaReal;
+        document.getElementById("juliaImag").value = config.juliaImag;
+        document.getElementById("juliaRealDisplay").textContent =
+          config.juliaReal.toFixed(2);
+        document.getElementById("juliaImagDisplay").textContent =
+          config.juliaImag.toFixed(2);
+
+        // Switch to Julia mode if not already
+        if (config.mode !== "julia") {
+          config.mode = "julia";
+          document.getElementById("mode").value = "julia";
+          updateModeIndicator();
+        }
+
+        render2D();
+
+        requestAnimationFrame(animationLoop);
+      }
+
+      // ============================================================================
+      // WEBGL GPU ACCELERATION
+      // ============================================================================
+
+      function initWebGL() {
+        // TODO: Implement WebGL renderer for GPU acceleration
+        // This would use fragment shaders for real-time deep zoom
+        updateStatus("WebGL renderer initialized", "success");
+      }
+
+      function renderWebGL() {
+        // TODO: WebGL rendering implementation
+        // For now, fall back to CPU
+        render2D();
+      }
+
+      // ============================================================================
+      // 3D FRACTALS (Mandelbulb / Mandelbox)
+      // ============================================================================
+
+      const canvas3D = document.getElementById("fractalCanvas3D");
+      let gl = null;
+      let rotating3D = false;
+      let rotation3D = 0;
+
+      function init3D() {
+        gl = canvas3D.getContext("webgl2") || canvas3D.getContext("webgl");
+        if (!gl) {
+          updateStatus("WebGL not supported - 3D mode unavailable", "error");
+          return;
+        }
+
+        // TODO: Full 3D raymarching implementation
+        // This would include:
+        // - Vertex/fragment shaders for raymarching
+        // - Mandelbulb distance estimator
+        // - Mandelbox distance estimator
+        // - Camera controls and orbit
+        // - Phong/ambient occlusion lighting
+
+        updateStatus("3D renderer initialized", "success");
+        render3D();
+      }
+
+      function render3D() {
+        // Placeholder for 3D rendering
+        if (!gl) {
+          init3D();
+          return;
+        }
+
+        // TODO: Implement raymarching
+        // Clear to indicate 3D mode is active
+        gl.clearColor(0.05, 0.05, 0.1, 1.0);
+        gl.clear(gl.COLOR_BUFFER_BIT);
+
+        updateStatus("3D rendering in progress...", "success");
+      }
+
+      window.toggleRotation = function () {
+        rotating3D = !rotating3D;
+        if (rotating3D) {
+          rotation3DLoop();
+        }
+      };
+
+      function rotation3DLoop() {
+        if (!rotating3D) return;
+        rotation3D += 0.01;
+        render3D();
+        requestAnimationFrame(rotation3DLoop);
+      }
+
+      // ============================================================================
+      // PATH RECORDING / PLAYBACK
+      // ============================================================================
+
+      window.toggleRecording = function () {
+        config.recording = !config.recording;
+        const btn = document.getElementById("recordBtn");
+
+        if (config.recording) {
+          btn.textContent = "⏹ Stop Recording";
+          btn.classList.remove("btn-secondary");
+          btn.classList.add("btn");
+          config.currentPath = [];
+          updateStatus("Recording path...", "success");
+        } else {
+          btn.textContent = "⏺ Start Recording";
+          btn.classList.add("btn-secondary");
+          btn.classList.remove("btn");
+
+          if (config.currentPath.length > 0) {
+            savePath();
+          }
+          updateStatus("Recording stopped", "success");
+        }
+      };
+
+      function savePath() {
+        const name = prompt(
+          "Name this path:",
+          `Path ${config.savedPaths.length + 1}`,
+        );
+        if (!name) return;
+
+        config.savedPaths.push({
+          name: name,
+          path: [...config.currentPath],
+          created: new Date().toISOString(),
+        });
+
+        config.currentPath = [];
+        updatePathList();
+        updateStatus(`Path "${name}" saved`, "success");
+      }
+
+      function updatePathList() {
+        const listEl = document.getElementById("pathList");
+
+        if (config.savedPaths.length === 0) {
+          listEl.innerHTML =
+            '<div style="text-align: center; color: var(--text-dim); font-size: 0.85em; padding: 20px;">No recorded paths</div>';
+          return;
+        }
+
+        listEl.innerHTML = config.savedPaths
+          .map(
+            (path, idx) => `
+          <div class="path-item">
+            <span>${path.name} (${path.path.length} points)</span>
+            <div>
+              <button onclick="playPath(${idx})">▶</button>
+              <button onclick="deletePath(${idx})" style="background: #ff4444;">✕</button>
+            </div>
+          </div>
+        `,
+          )
+          .join("");
+      }
+
+      window.playPath = async function (idx) {
+        const path = config.savedPaths[idx];
+        if (!path || path.path.length === 0) return;
+
+        updateStatus(`Playing path: ${path.name}`, "success");
+
+        for (let i = 0; i < path.path.length; i++) {
+          const point = path.path[i];
+
+          config.mode = point.mode;
+          config.centerX = point.centerX;
+          config.centerY = point.centerY;
+          config.zoom = point.zoom;
+          config.juliaReal = point.juliaReal;
+          config.juliaImag = point.juliaImag;
+
+          document.getElementById("mode").value = config.mode;
+          updateModeIndicator();
+          render2D();
+
+          // Wait between frames
+          await new Promise((resolve) => setTimeout(resolve, 500));
+        }
+
+        updateStatus("Path playback complete", "success");
+      };
+
+      window.deletePath = function (idx) {
+        if (confirm("Delete this path?")) {
+          config.savedPaths.splice(idx, 1);
+          updatePathList();
+          updateStatus("Path deleted", "success");
+        }
+      };
+
+      // ============================================================================
+      // AUDIO SYNTHESIS
+      // ============================================================================
+
+      window.toggleAudio = async function () {
+        if (!csoundReady) {
+          updateStatus("Initialize Csound first!", "error");
+          return;
+        }
+
+        audioPlaying = !audioPlaying;
+        const btn = document.getElementById("playAudioBtn");
+        const indicator = document.getElementById("audioIndicator");
+
+        if (audioPlaying) {
+          btn.textContent = "⏸ Stop Audio";
+          indicator.classList.add("active");
+          await audioLoop();
+        } else {
+          btn.textContent = "▶ Play Audio";
+          indicator.classList.remove("active");
+        }
+      };
+
+      async function audioLoop() {
+        if (!audioPlaying || !csoundReady) return;
+
+        try {
+          if (fractalData.length === 0) {
+            console.log("No fractal data to sonify");
+            setTimeout(() => audioLoop(), 1000);
+            return;
+          }
+
+          // Get current settings from UI
+          const synthType = document.getElementById("synthType").value;
+          const tempo = parseFloat(document.getElementById("tempo").value);
+          const baseFreq = parseFloat(
+            document.getElementById("baseFreq").value,
+          );
+          const pitchRange = parseFloat(
+            document.getElementById("pitchRange").value,
+          );
+          const density =
+            parseFloat(document.getElementById("noteDensity").value) / 100;
+          const durationScale = parseFloat(
+            document.getElementById("durationScale").value,
+          );
+          const attack = parseFloat(document.getElementById("attack").value);
+          const release = parseFloat(document.getElementById("release").value);
+
+          // Get parameter mappings
+          const iterMap = document.getElementById("iterMap").value;
+          const xMap = document.getElementById("xMap").value;
+          const yMap = document.getElementById("yMap").value;
+
+          // Map synthesis type to instrument number
+          const instrMap = {
+            pluck: 1,
+            fm: 2,
+            additive: 3,
+            clarinet: 4,
+            organ: 5,
+            granular: 6,
+            noise: 7,
+            subtractive: 8,
+          };
+          const instrNum = instrMap[synthType] || 1;
+
+          // Apply density filter
+          const filtered = fractalData.filter(() => Math.random() < density);
+          const sample = filtered.slice(0, Math.min(50, filtered.length));
+
+          console.log(
+            `Sending ${sample.length} notes (${synthType}, ${tempo} BPM)...`,
+          );
+
+          // Calculate timing based on tempo
+          const beatDuration = 60 / tempo;
+          let time = 0;
+
+          for (const point of sample) {
+            if (!audioPlaying) break;
+
+            // Initialize parameter values
+            let freq, amp, pan, brightness, dur;
+
+            // Map iteration count
+            const iterRatio = point.iter / config.maxIter;
+            if (iterMap === "pitch") {
+              freq = baseFreq * Math.pow(2, iterRatio * pitchRange);
+            } else if (iterMap === "amplitude") {
+              amp = 0.1 + iterRatio * 0.7;
+            } else if (iterMap === "brightness") {
+              brightness = iterRatio;
+            } else if (iterMap === "duration") {
+              dur = (0.1 + iterRatio * 0.9) * durationScale;
+            }
+
+            // Map X position
+            const xRatio = point.x / canvas2D.width;
+            if (xMap === "pan") {
+              pan = xRatio;
+            } else if (xMap === "pitch") {
+              freq = baseFreq * Math.pow(2, xRatio * pitchRange);
+            } else if (xMap === "brightness") {
+              brightness = xRatio;
+            }
+
+            // Map Y position
+            const yRatio = 1 - point.y / canvas2D.height;
+            if (yMap === "duration") {
+              dur = (0.1 + yRatio * 0.9) * durationScale;
+            } else if (yMap === "amplitude") {
+              amp = 0.1 + yRatio * 0.7;
+            } else if (yMap === "brightness") {
+              brightness = yRatio;
+            }
+
+            // Set defaults for unmapped parameters
+            if (freq === undefined)
+              freq = baseFreq * Math.pow(2, iterRatio * pitchRange);
+            if (amp === undefined) amp = 0.3;
+            if (pan === undefined) pan = xRatio;
+            if (brightness === undefined) brightness = iterRatio;
+            if (dur === undefined) dur = 0.5 * durationScale;
+
+            // Clamp values
+            freq = Math.max(20, Math.min(20000, freq));
+            amp = Math.max(0.05, Math.min(0.8, amp));
+            pan = Math.max(0, Math.min(1, pan));
+            brightness = Math.max(0, Math.min(1, brightness));
+            dur = Math.max(0.05, Math.min(5, dur));
+
+            // Send note to Csound
+            const scoreEvent = `i ${instrNum} ${time.toFixed(3)} ${dur.toFixed(3)} ${freq.toFixed(2)} ${amp.toFixed(3)} ${pan.toFixed(3)} ${brightness.toFixed(3)} ${attack} ${release}`;
+
+            await csound.inputMessage(scoreEvent);
+
+            // Increment time based on tempo
+            time += beatDuration * 0.25; // 16th note spacing
+          }
+
+          // Loop based on tempo
+          const loopDelay = Math.max(
+            500,
+            (60 / tempo) * sample.length * 0.25 * 1000,
+          );
+          setTimeout(() => audioLoop(), loopDelay);
+        } catch (err) {
+          console.error("Audio loop error:", err);
+          updateStatus("Audio error: " + err.message, "error");
+          if (audioPlaying) {
+            setTimeout(() => audioLoop(), 1000);
+          }
+        }
+      }
+
+      function highlightPlayingPoints(points) {
+        // This will be implemented in Phase 6 - for now just log
+        console.log(`Playing ${points.length} points`);
+      }
+
+      // ============================================================================
+      // DIMENSION SWITCHING
+      // ============================================================================
+
+      window.switchDimension = function (dim) {
+        config.dimension = dim;
+
+        // Update tab buttons
+        document
+          .querySelectorAll(".tab-btn")
+          .forEach((btn) => btn.classList.remove("active"));
+        event.target.classList.add("active");
+
+        // Show/hide controls
+        document
+          .getElementById("controls2d")
+          .classList.toggle("active", dim === "2d");
+        document
+          .getElementById("controls3d")
+          .classList.toggle("active", dim === "3d");
+
+        // Show/hide canvases
+        canvas2D.style.display = dim === "2d" ? "block" : "none";
+        canvas3D.style.display = dim === "3d" ? "block" : "none";
+
+        updateModeIndicator();
+
+        if (dim === "2d") {
+          render2D();
+        } else {
+          init3D();
+        }
+      };
+
+      // ============================================================================
+      // PRESETS
+      // ============================================================================
+
+      window.resetView = function () {
+        if (config.dimension === "2d") {
+          if (config.mode === "mandelbrot") {
+            config.centerX = -0.5;
+            config.centerY = 0.0;
+            config.zoom = 1.0;
+          } else {
+            config.centerX = 0.0;
+            config.centerY = 0.0;
+            config.zoom = 1.0;
+          }
+          render2D();
+        } else {
+          config.camDist = 3;
+          document.getElementById("camDist").value = 3;
+          document.getElementById("camDistDisplay").textContent = "3.0";
+          render3D();
+        }
+        updateStatus("View reset", "success");
+      };
+
+      window.loadPreset = function (name) {
+        switch (name) {
+          case "mandelbrot":
+            config.mode = "mandelbrot";
+            config.centerX = -0.5;
+            config.centerY = 0.0;
+            config.zoom = 1.0;
+            break;
+
+          case "julia1":
+            config.mode = "julia";
+            config.juliaReal = -0.7;
+            config.juliaImag = 0.27;
+            config.centerX = 0.0;
+            config.centerY = 0.0;
+            config.zoom = 1.0;
+            updateJuliaControls();
+            break;
+
+          case "julia2":
+            config.mode = "julia";
+            config.juliaReal = 0.285;
+            config.juliaImag = 0.01;
+            config.centerX = 0.0;
+            config.centerY = 0.0;
+            config.zoom = 1.0;
+            updateJuliaControls();
+            break;
+
+          case "julia3":
+            config.mode = "julia";
+            config.juliaReal = -0.4;
+            config.juliaImag = 0.6;
+            config.centerX = 0.0;
+            config.centerY = 0.0;
+            config.zoom = 1.0;
+            updateJuliaControls();
+            break;
+
+          case "spiral":
+            config.mode = "julia";
+            config.juliaReal = -0.79;
+            config.juliaImag = 0.15;
+            config.centerX = 0.0;
+            config.centerY = 0.0;
+            config.zoom = 1.0;
+            updateJuliaControls();
+            break;
+
+          case "dendrite":
+            config.mode = "julia";
+            config.juliaReal = 0.0;
+            config.juliaImag = 1.0;
+            config.centerX = 0.0;
+            config.centerY = 0.0;
+            config.zoom = 1.0;
+            updateJuliaControls();
+            break;
+        }
+
+        document.getElementById("mode").value = config.mode;
+        updateModeIndicator();
+        render2D();
+        updateStatus(`Loaded preset: ${name}`, "success");
+      };
+
+      window.load3DPreset = function (name) {
+        switch (name) {
+          case "bulb8":
+            config.fractal3dType = "mandelbulb";
+            config.power3d = 8;
+            config.iter3d = 8;
+            document.getElementById("fractal3dType").value = "mandelbulb";
+            document.getElementById("power3d").value = 8;
+            document.getElementById("powerDisplay").textContent = "8.0";
+            break;
+
+          case "bulb9":
+            config.fractal3dType = "mandelbulb";
+            config.power3d = 9;
+            config.iter3d = 10;
+            document.getElementById("fractal3dType").value = "mandelbulb";
+            document.getElementById("power3d").value = 9;
+            document.getElementById("powerDisplay").textContent = "9.0";
+            document.getElementById("iter3d").value = 10;
+            document.getElementById("iter3dDisplay").textContent = "10";
+            break;
+
+          case "box":
+            config.fractal3dType = "mandelbox";
+            config.power3d = 4;
+            config.iter3d = 12;
+            document.getElementById("fractal3dType").value = "mandelbox";
+            document.getElementById("power3d").value = 4;
+            document.getElementById("powerDisplay").textContent = "4.0";
+            document.getElementById("iter3d").value = 12;
+            document.getElementById("iter3dDisplay").textContent = "12";
+            break;
+
+          case "detailed":
+            config.iter3d = 16;
+            document.getElementById("iter3d").value = 16;
+            document.getElementById("iter3dDisplay").textContent = "16";
+            break;
+        }
+
+        updateModeIndicator();
+        render3D();
+        updateStatus(`Loaded 3D preset: ${name}`, "success");
+      };
+
+      function updateJuliaControls() {
+        document.getElementById("juliaReal").value = config.juliaReal;
+        document.getElementById("juliaImag").value = config.juliaImag;
+        document.getElementById("juliaRealDisplay").textContent =
+          config.juliaReal.toFixed(2);
+        document.getElementById("juliaImagDisplay").textContent =
+          config.juliaImag.toFixed(2);
+      }
+
+      // ============================================================================
+      // EXPORT
+      // ============================================================================
+
+      window.generateCsound = function () {
+        if (fractalData.length === 0) {
+          updateStatus("Render a fractal first!", "error");
+          return;
+        }
+
+        let score =
+          "; Csound Score Generated from " + config.mode.toUpperCase() + "\n";
+        score +=
+          "; Center: " +
+          config.centerX.toFixed(4) +
+          " + " +
+          config.centerY.toFixed(4) +
+          "i\n";
+        score += "; Zoom: " + config.zoom.toFixed(2) + "x\n";
+        score += "; Generated: " + new Date().toISOString() + "\n\n";
+
+        // Sort and filter
+        const sorted = [...fractalData].sort((a, b) => a.iter - b.iter);
+        const escaped = sorted.filter((d) => d.iter < config.maxIter);
+        const subset = escaped.slice(0, Math.min(200, escaped.length));
+
+        let time = 0;
+
+        subset.forEach((point) => {
+          const pitch = 36 + Math.floor((point.iter / config.maxIter) * 48);
+          const freq = 440 * Math.pow(2, (pitch - 69) / 12);
+          const pan = point.x / canvas2D.width;
+          const duration = 0.5 + (1 - point.y / canvas2D.height) * 2;
+          const amp = 0.3 + (point.iter / config.maxIter) * 0.6;
+          const brightness = Math.min(1, point.iter / config.maxIter);
+
+          score += `i 1 ${time.toFixed(3)} ${duration.toFixed(3)} ${freq.toFixed(2)} ${amp.toFixed(3)} ${pan.toFixed(3)} ${brightness.toFixed(3)}\n`;
+          time += 0.05;
+        });
+
+        score += "\ne\n";
+
+        const orchestra = `; Dr.C - Mandelbrot Explorer - Generated Composition
+<CsoundSynthesizer>
+<CsOptions>
+-odac -d
+</CsOptions>
+<CsInstruments>
+
+sr = 44100
+ksmps = 32
+nchnls = 2
+0dbfs = 1
+
+gaReverb init 0
+
+instr 1
+  ; p4 = frequency (Hz)
+  ; p5 = amplitude
+  ; p6 = pan (0-1)
+  ; p7 = brightness (0-1)
+  
+  iFreq = p4
+  iAmp = p5
+  iPan = p6
+  iBright = p7
+  
+  kEnv = linsegr:k(0, 0.01, 1, 0.1, 0.8, 0.05, 0)
+  
+  iHarms = 1 + iBright * 8
+  aSig = gbuzz:a(iAmp * kEnv, iFreq, iHarms, 1, 0.9, -1)
+  
+  kCutoff = iFreq * (2 + iBright * 4)
+  aSig = moogladder:a(aSig, kCutoff, 0.3)
+  
+  aL = aSig * sqrt(1 - iPan)
+  aR = aSig * sqrt(iPan)
+  
+  gaReverb = gaReverb + (aL + aR) * 0.5 * 0.3
+  
+  out(aL * 0.7, aR * 0.7)
+endin
+
+instr 999
+  aL, aR freeverb gaReverb, gaReverb, 0.85, 0.7
+  out(aL * 0.7, aR * 0.7)
+  gaReverb = 0
+endin
+
+f1 0 16384 10 1
+
+</CsInstruments>
+<CsScore>
+
+${score}
+
+i 999 0 [${time} + 5]
+
+</CsScore>
+</CsoundSynthesizer>`;
+
+        document.getElementById("csoundOutput").value = orchestra;
+        updateStatus("Csound .csd file generated!", "success");
+      };
+
+      window.downloadImage = function () {
+        const link = document.createElement("a");
+        link.download = `fractal-${Date.now()}.png`;
+        link.href = canvas2D.toDataURL();
+        link.click();
+        updateStatus("Image saved!", "success");
+      };
+
+      // ============================================================================
+      // UTILITY
+      // ============================================================================
+
+      function updateStatus(message, type = "") {
+        const statusBar = document.getElementById("statusBar");
+        statusBar.textContent = message;
+        statusBar.className = "status-bar";
+        if (type) statusBar.classList.add(type);
+      }
+
+      // Start application
+      init();
+    </script>
+  </body>
+</html>
