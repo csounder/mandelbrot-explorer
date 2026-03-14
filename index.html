@@ -3,949 +3,464 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Dr.C - Mandelbrot Explorer</title>
-    <link
-      href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;800&family=Rajdhani:wght@400;600&display=swap"
-      rel="stylesheet"
-    />
+    <title>Dr.C - Mandelbrot Explorer | Fractal Sound Design</title>
     <style>
-      :root {
-        --bg-primary: #0a0a0a;
-        --bg-secondary: #151515;
-        --bg-tertiary: #1a1a1a;
-        --accent: #00ff88;
-        --accent-dim: #00cc66;
-        --accent-glow: rgba(0, 255, 136, 0.3);
-        --text: #e0e0e0;
-        --text-dim: #999;
-        --border: #333;
-      }
-
       * {
         margin: 0;
         padding: 0;
         box-sizing: border-box;
       }
 
+      :root {
+        --bg: #0a0e14;
+        --bg-light: #151a21;
+        --text: #e6e6e6;
+        --text-dim: #8a9199;
+        --accent: #00ff88;
+        --accent-dim: rgba(0, 255, 136, 0.2);
+        --border: #2a3039;
+      }
+
       body {
-        font-family: "Rajdhani", sans-serif;
-        background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu,
+          Cantarell, sans-serif;
+        background: linear-gradient(135deg, #0a0e14 0%, #1a1f2e 100%);
         color: var(--text);
-        min-height: 100vh;
-        padding: 20px;
+        line-height: 1.6;
         overflow-x: hidden;
       }
 
       .container {
-        max-width: 1400px;
+        max-width: 1200px;
         margin: 0 auto;
+        padding: 0 20px;
       }
 
       header {
+        padding: 40px 0;
         text-align: center;
-        margin-bottom: 30px;
+        background: var(--bg);
+        border-bottom: 2px solid var(--accent);
       }
 
       h1 {
-        font-family: "Orbitron", monospace;
-        font-size: 3em;
-        font-weight: 800;
-        color: var(--accent);
-        text-shadow: 0 0 20px var(--accent-glow);
+        font-size: 3.5em;
         margin-bottom: 10px;
+        background: linear-gradient(135deg, var(--accent) 0%, #00ccff 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
       }
 
-      .subtitle {
+      .tagline {
+        font-size: 1.4em;
+        color: var(--text-dim);
+        margin-bottom: 30px;
+      }
+
+      .hero {
+        padding: 80px 0;
+        text-align: center;
+      }
+
+      .hero h2 {
+        font-size: 2.5em;
+        margin-bottom: 20px;
+        color: var(--accent);
+      }
+
+      .hero p {
         font-size: 1.2em;
         color: var(--text-dim);
-        font-weight: 400;
+        max-width: 800px;
+        margin: 0 auto 40px;
       }
 
-      .main-grid {
-        display: grid;
-        grid-template-columns: 350px 1fr;
+      .cta-buttons {
+        display: flex;
         gap: 20px;
-        margin-bottom: 20px;
-      }
-
-      .controls-panel {
-        background: var(--bg-secondary);
-        border: 1px solid var(--border);
-        border-radius: 8px;
-        padding: 20px;
-        height: fit-content;
-      }
-
-      .control-section {
-        margin-bottom: 25px;
-        padding-bottom: 20px;
-        border-bottom: 1px solid var(--border);
-      }
-
-      .control-section:last-child {
-        border-bottom: none;
-        margin-bottom: 0;
-        padding-bottom: 0;
-      }
-
-      .control-section h3 {
-        font-family: "Orbitron", monospace;
-        font-size: 1.1em;
-        color: var(--accent);
-        margin-bottom: 15px;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-      }
-
-      .control-group {
-        margin-bottom: 15px;
-      }
-
-      .control-group label {
-        display: block;
-        margin-bottom: 5px;
-        color: var(--text-dim);
-        font-size: 0.95em;
-      }
-
-      .control-group input[type="range"] {
-        width: 100%;
-        height: 6px;
-        background: var(--bg-tertiary);
-        border-radius: 3px;
-        outline: none;
-        -webkit-appearance: none;
-      }
-
-      .control-group input[type="range"]::-webkit-slider-thumb {
-        -webkit-appearance: none;
-        width: 16px;
-        height: 16px;
-        background: var(--accent);
-        border-radius: 50%;
-        cursor: pointer;
-        box-shadow: 0 0 10px var(--accent-glow);
-      }
-
-      .control-group input[type="range"]::-moz-range-thumb {
-        width: 16px;
-        height: 16px;
-        background: var(--accent);
-        border-radius: 50%;
-        cursor: pointer;
-        border: none;
-        box-shadow: 0 0 10px var(--accent-glow);
-      }
-
-      .control-group select,
-      .control-group input[type="number"] {
-        width: 100%;
-        padding: 8px 12px;
-        background: var(--bg-tertiary);
-        border: 1px solid var(--border);
-        border-radius: 4px;
-        color: var(--text);
-        font-family: "Rajdhani", sans-serif;
-        font-size: 1em;
-      }
-
-      .value-display {
-        display: inline-block;
-        float: right;
-        color: var(--accent);
-        font-weight: 600;
+        justify-content: center;
+        flex-wrap: wrap;
+        margin-top: 40px;
       }
 
       .btn {
-        width: 100%;
-        padding: 12px;
-        background: linear-gradient(135deg, var(--accent-dim), var(--accent));
+        padding: 15px 40px;
+        font-size: 1.1em;
         border: none;
-        border-radius: 6px;
-        color: #000;
-        font-family: "Orbitron", monospace;
-        font-size: 1em;
-        font-weight: 600;
+        border-radius: 8px;
         cursor: pointer;
+        text-decoration: none;
+        display: inline-block;
         transition: all 0.3s ease;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        margin-bottom: 10px;
+        font-weight: 600;
       }
 
-      .btn:hover {
+      .btn-primary {
+        background: var(--accent);
+        color: var(--bg);
+      }
+
+      .btn-primary:hover {
+        background: #00dd77;
         transform: translateY(-2px);
-        box-shadow: 0 5px 20px var(--accent-glow);
+        box-shadow: 0 10px 30px rgba(0, 255, 136, 0.3);
       }
 
       .btn-secondary {
-        background: var(--bg-tertiary);
+        background: var(--bg-light);
         color: var(--accent);
-        border: 1px solid var(--accent);
+        border: 2px solid var(--accent);
       }
 
       .btn-secondary:hover {
-        background: var(--accent);
-        color: #000;
-      }
-
-      .canvas-container {
-        position: relative;
-        background: var(--bg-secondary);
-        border: 1px solid var(--border);
-        border-radius: 8px;
-        overflow: hidden;
-      }
-
-      canvas {
-        display: block;
-        cursor: crosshair;
-        image-rendering: pixelated;
-      }
-
-      .info-overlay {
-        position: absolute;
-        top: 10px;
-        left: 10px;
-        background: rgba(10, 10, 10, 0.8);
-        padding: 10px 15px;
-        border-radius: 6px;
-        font-family: "Orbitron", monospace;
-        font-size: 0.85em;
-        color: var(--accent);
-        pointer-events: none;
-      }
-
-      .info-overlay div {
-        margin-bottom: 3px;
-      }
-
-      .mode-indicator {
-        position: absolute;
-        top: 10px;
-        right: 10px;
-        background: rgba(0, 255, 136, 0.2);
-        padding: 8px 16px;
-        border-radius: 20px;
-        border: 1px solid var(--accent);
-        font-family: "Orbitron", monospace;
-        font-size: 0.9em;
-        color: var(--accent);
-        text-transform: uppercase;
-        pointer-events: none;
-      }
-
-      .csound-output {
-        background: var(--bg-secondary);
-        border: 1px solid var(--border);
-        border-radius: 8px;
-        padding: 20px;
-      }
-
-      .csound-output h3 {
-        font-family: "Orbitron", monospace;
-        font-size: 1.1em;
-        color: var(--accent);
-        margin-bottom: 15px;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-      }
-
-      .csound-output textarea {
-        width: 100%;
-        height: 300px;
-        background: var(--bg-tertiary);
-        border: 1px solid var(--border);
-        border-radius: 4px;
-        color: var(--text);
-        font-family: "Courier New", monospace;
-        font-size: 0.85em;
-        padding: 15px;
-        resize: vertical;
-      }
-
-      .preset-buttons {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 8px;
-        margin-bottom: 15px;
-      }
-
-      .preset-btn {
-        padding: 8px;
-        background: var(--bg-tertiary);
-        border: 1px solid var(--border);
-        border-radius: 4px;
-        color: var(--text);
-        font-family: "Rajdhani", sans-serif;
-        font-size: 0.9em;
-        cursor: pointer;
-        transition: all 0.2s ease;
-      }
-
-      .preset-btn:hover {
         background: var(--accent-dim);
-        color: #000;
-        border-color: var(--accent);
+        transform: translateY(-2px);
       }
 
-      .instructions {
-        background: rgba(0, 255, 136, 0.05);
-        border: 1px solid var(--accent-dim);
-        border-radius: 6px;
-        padding: 12px;
-        font-size: 0.9em;
-        line-height: 1.6;
+      .features {
+        padding: 80px 0;
+        background: var(--bg-light);
+      }
+
+      .features h2 {
+        text-align: center;
+        font-size: 2.5em;
+        margin-bottom: 60px;
+        color: var(--accent);
+      }
+
+      .feature-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 40px;
+      }
+
+      .feature-card {
+        background: var(--bg);
+        padding: 30px;
+        border-radius: 12px;
+        border: 1px solid var(--border);
+        transition: all 0.3s ease;
+      }
+
+      .feature-card:hover {
+        border-color: var(--accent);
+        transform: translateY(-5px);
+        box-shadow: 0 10px 30px rgba(0, 255, 136, 0.2);
+      }
+
+      .feature-card h3 {
+        font-size: 1.5em;
+        margin-bottom: 15px;
+        color: var(--accent);
+      }
+
+      .feature-icon {
+        font-size: 3em;
+        margin-bottom: 15px;
+      }
+
+      .specs {
+        padding: 80px 0;
+      }
+
+      .specs h2 {
+        text-align: center;
+        font-size: 2.5em;
+        margin-bottom: 40px;
+        color: var(--accent);
+      }
+
+      .spec-list {
+        max-width: 800px;
+        margin: 0 auto;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+        gap: 20px;
+      }
+
+      .spec-item {
+        background: var(--bg-light);
+        padding: 20px;
+        border-radius: 8px;
+        border-left: 4px solid var(--accent);
+      }
+
+      .spec-item strong {
+        color: var(--accent);
+        display: block;
+        margin-bottom: 5px;
+      }
+
+      .docs-section {
+        padding: 80px 0;
+        background: var(--bg-light);
+      }
+
+      .docs-section h2 {
+        text-align: center;
+        font-size: 2.5em;
+        margin-bottom: 60px;
+        color: var(--accent);
+      }
+
+      .docs-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 30px;
+      }
+
+      .doc-card {
+        background: var(--bg);
+        padding: 30px;
+        border-radius: 12px;
+        border: 1px solid var(--border);
+        text-align: center;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        color: var(--text);
+        display: block;
+      }
+
+      .doc-card:hover {
+        border-color: var(--accent);
+        transform: translateY(-5px);
+        box-shadow: 0 10px 30px rgba(0, 255, 136, 0.2);
+      }
+
+      .doc-icon {
+        font-size: 3em;
+        margin-bottom: 15px;
+      }
+
+      .doc-card h3 {
+        color: var(--accent);
+        margin-bottom: 10px;
+        font-size: 1.3em;
+      }
+
+      footer {
+        padding: 40px 0;
+        text-align: center;
+        background: var(--bg);
+        border-top: 2px solid var(--accent);
+        margin-top: 80px;
+      }
+
+      footer p {
         color: var(--text-dim);
       }
 
-      .instructions strong {
-        color: var(--accent);
-      }
+      @media (max-width: 768px) {
+        h1 {
+          font-size: 2.5em;
+        }
 
-      @media (max-width: 1024px) {
-        .main-grid {
-          grid-template-columns: 1fr;
+        .hero h2 {
+          font-size: 2em;
+        }
+
+        .hero p {
+          font-size: 1em;
+        }
+
+        .cta-buttons {
+          flex-direction: column;
+        }
+
+        .btn {
+          width: 100%;
         }
       }
     </style>
   </head>
   <body>
-    <div class="container">
-      <header>
+    <header>
+      <div class="container">
         <h1>Dr.C - Mandelbrot Explorer</h1>
-        <div class="subtitle">Complex Plane Fractals → Csound</div>
-      </header>
+        <p class="tagline">Where Fractals Become Music</p>
+      </div>
+    </header>
 
-      <div class="main-grid">
-        <!-- Controls Panel -->
-        <div class="controls-panel">
-          <div class="control-section">
-            <h3>Fractal Mode</h3>
-            <div class="control-group">
-              <label>Set Type</label>
-              <select id="mode">
-                <option value="mandelbrot">Mandelbrot Set</option>
-                <option value="julia">Julia Set</option>
-              </select>
-            </div>
-            <div class="instructions">
-              <strong>Mandelbrot:</strong> Click to zoom in<br />
-              <strong>Julia:</strong> Click to set C parameter
-            </div>
-          </div>
-
-          <div class="control-section">
-            <h3>Rendering</h3>
-            <div class="control-group">
-              <label
-                >Max Iterations
-                <span class="value-display" id="maxIterDisplay"
-                  >100</span
-                ></label
-              >
-              <input type="range" id="maxIter" min="20" max="500" value="100" />
-            </div>
-            <div class="control-group">
-              <label>Color Scheme</label>
-              <select id="colorScheme">
-                <option value="classic">Classic (B&W)</option>
-                <option value="rainbow">Rainbow</option>
-                <option value="fire">Fire</option>
-                <option value="ocean">Ocean</option>
-                <option value="psychedelic">Psychedelic</option>
-              </select>
-            </div>
-            <div class="control-group">
-              <label
-                >Escape Radius
-                <span class="value-display" id="escapeDisplay">2.0</span></label
-              >
-              <input
-                type="range"
-                id="escapeRadius"
-                min="2"
-                max="10"
-                step="0.5"
-                value="2"
-              />
-            </div>
-          </div>
-
-          <div class="control-section">
-            <h3>Julia Parameters</h3>
-            <div class="control-group">
-              <label
-                >Real (C.x)
-                <span class="value-display" id="juliaRealDisplay"
-                  >-0.70</span
-                ></label
-              >
-              <input
-                type="range"
-                id="juliaReal"
-                min="-2"
-                max="2"
-                step="0.01"
-                value="-0.70"
-              />
-            </div>
-            <div class="control-group">
-              <label
-                >Imaginary (C.y)
-                <span class="value-display" id="juliaImagDisplay"
-                  >0.27</span
-                ></label
-              >
-              <input
-                type="range"
-                id="juliaImag"
-                min="-2"
-                max="2"
-                step="0.01"
-                value="0.27"
-              />
-            </div>
-          </div>
-
-          <div class="control-section">
-            <h3>Presets</h3>
-            <div class="preset-buttons">
-              <button class="preset-btn" onclick="loadPreset('mandelbrot')">
-                Mandelbrot
-              </button>
-              <button class="preset-btn" onclick="loadPreset('julia1')">
-                Julia 1
-              </button>
-              <button class="preset-btn" onclick="loadPreset('julia2')">
-                Julia 2
-              </button>
-              <button class="preset-btn" onclick="loadPreset('julia3')">
-                Julia 3
-              </button>
-              <button class="preset-btn" onclick="loadPreset('spiral')">
-                Spiral
-              </button>
-              <button class="preset-btn" onclick="loadPreset('dendrite')">
-                Dendrite
-              </button>
-            </div>
-          </div>
-
-          <div class="control-section">
-            <h3>Actions</h3>
-            <button class="btn" onclick="resetView()">Reset View</button>
-            <button class="btn btn-secondary" onclick="generateCsound()">
-              Generate Csound Score
-            </button>
-          </div>
-        </div>
-
-        <!-- Canvas Container -->
-        <div class="canvas-container">
-          <canvas id="fractalCanvas" width="800" height="600"></canvas>
-          <div class="info-overlay">
-            <div>Zoom: <span id="zoomLevel">1.0</span>x</div>
-            <div>Center: <span id="centerCoords">0.0, 0.0</span></div>
-          </div>
-          <div class="mode-indicator" id="modeIndicator">Mandelbrot</div>
+    <section class="hero">
+      <div class="container">
+        <h2>Transform Mathematical Beauty into Sound</h2>
+        <p>
+          A real-time fractal visualization and sonification engine powered by
+          Csound WASM. Explore the infinite depths of the Mandelbrot and Julia
+          sets while mapping fractal geometry to musical parameters through
+          sophisticated synthesis algorithms.
+        </p>
+        <div class="cta-buttons">
+          <a href="app-v2.1.html" class="btn btn-primary">🎵 Launch Explorer</a>
+          <a href="quickstart.html" class="btn btn-secondary">📖 Quick Start</a>
         </div>
       </div>
+    </section>
 
-      <!-- Csound Output -->
-      <div class="csound-output">
-        <h3>Csound Score Output</h3>
-        <textarea
-          id="csoundOutput"
-          placeholder="Generated Csound score will appear here...
+    <section class="features">
+      <div class="container">
+        <h2>Features</h2>
+        <div class="feature-grid">
+          <div class="feature-card">
+            <div class="feature-icon">🎨</div>
+            <h3>Real-Time Fractal Visualization</h3>
+            <p>
+              Explore Mandelbrot and Julia sets with smooth zooming, panning,
+              and animation. Choose from 6 stunning color schemes including
+              Fire, Rainbow, Ocean, and Psychedelic.
+            </p>
+          </div>
 
-Click 'Generate Csound Score' to create music from the current fractal view.
+          <div class="feature-card">
+            <div class="feature-icon">🎹</div>
+            <h3>11 Synthesis Algorithms</h3>
+            <p>
+              Pluck, FM Bell, Additive Bell, Waveshaping, Organ, Granular,
+              Filtered Noise, Subtractive (Moog), FM Mallet, Waveguide String,
+              and Supersaw synthesis.
+            </p>
+          </div>
 
-The score maps:
-- Iteration count → pitch
-- Coordinate position → stereo panning
-- Escape time → note duration
-- Fractal density → amplitude"
-        ></textarea>
+          <div class="feature-card">
+            <div class="feature-icon">🎼</div>
+            <h3>Musical Quantization</h3>
+            <p>
+              Map fractal data to scales (Major, Minor, Pentatonic, Blues,
+              Modes, Microtonal) and rhythmic grids (Whole notes to 128th notes,
+              dotted, and triplets).
+            </p>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-icon">✨</div>
+            <h3>Global Effects</h3>
+            <p>
+              Professional-grade Reverb, Echo, Chorus, and Flanger with
+              real-time parameter control and fractal-to-effect mapping.
+            </p>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-icon">🎚️</div>
+            <h3>Parameter Mapping</h3>
+            <p>
+              Map 6 fractal parameters (Iteration, Position X/Y, Smoothness,
+              Angle, Magnitude) to 8 synthesis targets and 6 effect parameters.
+            </p>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-icon">💾</div>
+            <h3>45 Factory Presets</h3>
+            <p>
+              3 presets per instrument and 2 per visual style, professionally
+              designed to showcase the sonic possibilities. Save unlimited
+              custom presets.
+            </p>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-icon">⚡</div>
+            <h3>Csound WASM v7</h3>
+            <p>
+              Real-time audio synthesis in the browser with zero latency using
+              the latest Csound WebAssembly technology.
+            </p>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-icon">🎲</div>
+            <h3>Randomize & Explore</h3>
+            <p>
+              One-click randomization of all parameters for instant sonic
+              discovery. Perfect for finding unexpected musical combinations.
+            </p>
+          </div>
+        </div>
       </div>
-    </div>
-
-    <script>
-      // Canvas and context
-      const canvas = document.getElementById("fractalCanvas");
-      const ctx = canvas.getContext("2d");
-
-      // Fractal parameters
-      let config = {
-        mode: "mandelbrot",
-        centerX: -0.5,
-        centerY: 0.0,
-        zoom: 1.0,
-        maxIter: 100,
-        escapeRadius: 2.0,
-        juliaReal: -0.7,
-        juliaImag: 0.27,
-        colorScheme: "classic",
-      };
-
-      // Fractal data for Csound generation
-      let fractalData = [];
-
-      // Initialize
-      function init() {
-        setupEventListeners();
-        render();
-      }
-
-      // Event listeners
-      function setupEventListeners() {
-        // Canvas click
-        canvas.addEventListener("click", handleCanvasClick);
-
-        // Mode change
-        document.getElementById("mode").addEventListener("change", (e) => {
-          config.mode = e.target.value;
-          document.getElementById("modeIndicator").textContent =
-            config.mode === "mandelbrot" ? "Mandelbrot" : "Julia Set";
-          render();
-        });
-
-        // Max iterations
-        document.getElementById("maxIter").addEventListener("input", (e) => {
-          config.maxIter = parseInt(e.target.value);
-          document.getElementById("maxIterDisplay").textContent =
-            config.maxIter;
-          render();
-        });
-
-        // Escape radius
-        document
-          .getElementById("escapeRadius")
-          .addEventListener("input", (e) => {
-            config.escapeRadius = parseFloat(e.target.value);
-            document.getElementById("escapeDisplay").textContent =
-              config.escapeRadius.toFixed(1);
-            render();
-          });
-
-        // Julia parameters
-        document.getElementById("juliaReal").addEventListener("input", (e) => {
-          config.juliaReal = parseFloat(e.target.value);
-          document.getElementById("juliaRealDisplay").textContent =
-            config.juliaReal.toFixed(2);
-          if (config.mode === "julia") render();
-        });
-
-        document.getElementById("juliaImag").addEventListener("input", (e) => {
-          config.juliaImag = parseFloat(e.target.value);
-          document.getElementById("juliaImagDisplay").textContent =
-            config.juliaImag.toFixed(2);
-          if (config.mode === "julia") render();
-        });
-
-        // Color scheme
-        document
-          .getElementById("colorScheme")
-          .addEventListener("change", (e) => {
-            config.colorScheme = e.target.value;
-            render();
-          });
-      }
-
-      // Handle canvas click
-      function handleCanvasClick(e) {
-        const rect = canvas.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-
-        // Convert pixel coordinates to complex plane
-        const re = pixelToRe(x);
-        const im = pixelToIm(y);
-
-        if (config.mode === "mandelbrot") {
-          // Zoom into clicked point
-          config.centerX = re;
-          config.centerY = im;
-          config.zoom *= 2;
-          render();
-        } else {
-          // Update Julia set parameter
-          config.juliaReal = re;
-          config.juliaImag = im;
-          document.getElementById("juliaReal").value = re;
-          document.getElementById("juliaImag").value = im;
-          document.getElementById("juliaRealDisplay").textContent =
-            re.toFixed(2);
-          document.getElementById("juliaImagDisplay").textContent =
-            im.toFixed(2);
-          render();
-        }
-      }
-
-      // Coordinate conversion
-      function pixelToRe(x) {
-        const width = canvas.width;
-        const scale = 4.0 / config.zoom;
-        return config.centerX + (x - width / 2) * (scale / width);
-      }
-
-      function pixelToIm(y) {
-        const height = canvas.height;
-        const scale = 4.0 / config.zoom;
-        return config.centerY + (y - height / 2) * (scale / height);
-      }
-
-      // Mandelbrot iteration
-      function mandelbrot(x0, y0) {
-        let x = 0,
-          y = 0;
-        let iteration = 0;
-        const r2 = config.escapeRadius * config.escapeRadius;
-
-        while (x * x + y * y <= r2 && iteration < config.maxIter) {
-          const xTemp = x * x - y * y + x0;
-          y = 2 * x * y + y0;
-          x = xTemp;
-          iteration++;
-        }
-
-        // Smooth coloring
-        if (iteration < config.maxIter) {
-          const log_zn = Math.log(x * x + y * y) / 2;
-          const nu = Math.log(log_zn / Math.log(2)) / Math.log(2);
-          iteration = iteration + 1 - nu;
-        }
-
-        return iteration;
-      }
-
-      // Julia set iteration
-      function julia(x0, y0) {
-        let x = x0,
-          y = y0;
-        let iteration = 0;
-        const r2 = config.escapeRadius * config.escapeRadius;
-
-        while (x * x + y * y <= r2 && iteration < config.maxIter) {
-          const xTemp = x * x - y * y + config.juliaReal;
-          y = 2 * x * y + config.juliaImag;
-          x = xTemp;
-          iteration++;
-        }
-
-        // Smooth coloring
-        if (iteration < config.maxIter) {
-          const log_zn = Math.log(x * x + y * y) / 2;
-          const nu = Math.log(log_zn / Math.log(2)) / Math.log(2);
-          iteration = iteration + 1 - nu;
-        }
-
-        return iteration;
-      }
-
-      // Color mapping
-      function getColor(iteration) {
-        if (iteration >= config.maxIter) {
-          return [0, 0, 0]; // Inside set
-        }
-
-        const t = iteration / config.maxIter;
-
-        switch (config.colorScheme) {
-          case "classic":
-            const val = Math.floor(255 * t);
-            return [val, val, val];
-
-          case "rainbow":
-            return hsvToRgb((t * 360) % 360, 1, 1);
-
-          case "fire":
-            return [
-              Math.floor(255 * Math.min(1, t * 2)),
-              Math.floor(255 * Math.max(0, t * 2 - 0.5)),
-              Math.floor(50 * t),
-            ];
-
-          case "ocean":
-            return [
-              Math.floor(100 * t),
-              Math.floor(150 * t),
-              Math.floor(255 * Math.sqrt(t)),
-            ];
-
-          case "psychedelic":
-            return [
-              Math.floor(128 + 127 * Math.sin(t * Math.PI * 4)),
-              Math.floor(128 + 127 * Math.sin(t * Math.PI * 6 + 2)),
-              Math.floor(128 + 127 * Math.sin(t * Math.PI * 8 + 4)),
-            ];
-
-          default:
-            return [255, 255, 255];
-        }
-      }
-
-      // HSV to RGB conversion
-      function hsvToRgb(h, s, v) {
-        const c = v * s;
-        const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
-        const m = v - c;
-
-        let r, g, b;
-        if (h < 60) [r, g, b] = [c, x, 0];
-        else if (h < 120) [r, g, b] = [x, c, 0];
-        else if (h < 180) [r, g, b] = [0, c, x];
-        else if (h < 240) [r, g, b] = [0, x, c];
-        else if (h < 300) [r, g, b] = [x, 0, c];
-        else [r, g, b] = [c, 0, x];
-
-        return [
-          Math.floor((r + m) * 255),
-          Math.floor((g + m) * 255),
-          Math.floor((b + m) * 255),
-        ];
-      }
-
-      // Render fractal
-      function render() {
-        const width = canvas.width;
-        const height = canvas.height;
-        const imageData = ctx.createImageData(width, height);
-        fractalData = [];
-
-        for (let py = 0; py < height; py++) {
-          for (let px = 0; px < width; px++) {
-            const re = pixelToRe(px);
-            const im = pixelToIm(py);
-
-            const iteration =
-              config.mode === "mandelbrot" ? mandelbrot(re, im) : julia(re, im);
-
-            const [r, g, b] = getColor(iteration);
-            const idx = (py * width + px) * 4;
-
-            imageData.data[idx] = r;
-            imageData.data[idx + 1] = g;
-            imageData.data[idx + 2] = b;
-            imageData.data[idx + 3] = 255;
-
-            // Sample data for Csound (downsample for performance)
-            if (px % 10 === 0 && py % 10 === 0) {
-              fractalData.push({
-                x: px,
-                y: py,
-                re: re,
-                im: im,
-                iter: iteration,
-              });
-            }
-          }
-        }
-
-        ctx.putImageData(imageData, 0, 0);
-        updateInfo();
-      }
-
-      // Update info overlay
-      function updateInfo() {
-        document.getElementById("zoomLevel").textContent =
-          config.zoom.toFixed(2);
-        document.getElementById("centerCoords").textContent =
-          config.centerX.toFixed(4) + ", " + config.centerY.toFixed(4);
-      }
-
-      // Reset view
-      function resetView() {
-        if (config.mode === "mandelbrot") {
-          config.centerX = -0.5;
-          config.centerY = 0.0;
-          config.zoom = 1.0;
-        } else {
-          config.centerX = 0.0;
-          config.centerY = 0.0;
-          config.zoom = 1.0;
-        }
-        render();
-      }
-
-      // Presets
-      function loadPreset(name) {
-        switch (name) {
-          case "mandelbrot":
-            config.mode = "mandelbrot";
-            config.centerX = -0.5;
-            config.centerY = 0.0;
-            config.zoom = 1.0;
-            document.getElementById("mode").value = "mandelbrot";
-            break;
-
-          case "julia1":
-            config.mode = "julia";
-            config.juliaReal = -0.7;
-            config.juliaImag = 0.27;
-            config.centerX = 0.0;
-            config.centerY = 0.0;
-            config.zoom = 1.0;
-            updateJuliaControls();
-            document.getElementById("mode").value = "julia";
-            break;
-
-          case "julia2":
-            config.mode = "julia";
-            config.juliaReal = 0.285;
-            config.juliaImag = 0.01;
-            config.centerX = 0.0;
-            config.centerY = 0.0;
-            config.zoom = 1.0;
-            updateJuliaControls();
-            document.getElementById("mode").value = "julia";
-            break;
-
-          case "julia3":
-            config.mode = "julia";
-            config.juliaReal = -0.4;
-            config.juliaImag = 0.6;
-            config.centerX = 0.0;
-            config.centerY = 0.0;
-            config.zoom = 1.0;
-            updateJuliaControls();
-            document.getElementById("mode").value = "julia";
-            break;
-
-          case "spiral":
-            config.mode = "julia";
-            config.juliaReal = -0.79;
-            config.juliaImag = 0.15;
-            config.centerX = 0.0;
-            config.centerY = 0.0;
-            config.zoom = 1.0;
-            updateJuliaControls();
-            document.getElementById("mode").value = "julia";
-            break;
-
-          case "dendrite":
-            config.mode = "julia";
-            config.juliaReal = 0.0;
-            config.juliaImag = 1.0;
-            config.centerX = 0.0;
-            config.centerY = 0.0;
-            config.zoom = 1.0;
-            updateJuliaControls();
-            document.getElementById("mode").value = "julia";
-            break;
-        }
-
-        document.getElementById("modeIndicator").textContent =
-          config.mode === "mandelbrot" ? "Mandelbrot" : "Julia Set";
-        render();
-      }
-
-      function updateJuliaControls() {
-        document.getElementById("juliaReal").value = config.juliaReal;
-        document.getElementById("juliaImag").value = config.juliaImag;
-        document.getElementById("juliaRealDisplay").textContent =
-          config.juliaReal.toFixed(2);
-        document.getElementById("juliaImagDisplay").textContent =
-          config.juliaImag.toFixed(2);
-      }
-
-      // Generate Csound score
-      function generateCsound() {
-        if (fractalData.length === 0) {
-          alert("Please render a fractal first!");
-          return;
-        }
-
-        let score =
-          "; Csound Score Generated from " + config.mode.toUpperCase() + "\n";
-        score +=
-          "; Center: " +
-          config.centerX.toFixed(4) +
-          " + " +
-          config.centerY.toFixed(4) +
-          "i\n";
-        score += "; Zoom: " + config.zoom.toFixed(2) + "x\n";
-        score += "; Generated: " + new Date().toISOString() + "\n\n";
-
-        // Sort by iteration count for interesting patterns
-        const sorted = [...fractalData].sort((a, b) => a.iter - b.iter);
-
-        // Filter to only escaped points (more musical)
-        const escaped = sorted.filter((d) => d.iter < config.maxIter);
-
-        // Take a subset for performance
-        const subset = escaped.slice(0, Math.min(200, escaped.length));
-
-        let time = 0;
-
-        subset.forEach((point, i) => {
-          // Map iteration to pitch (MIDI note)
-          const pitch = 36 + Math.floor((point.iter / config.maxIter) * 48);
-
-          // Map x position to pan (0 = left, 1 = right)
-          const pan = point.x / canvas.width;
-
-          // Map y position to duration
-          const duration = 0.5 + (1 - point.y / canvas.height) * 2;
-
-          // Map iteration density to amplitude
-          const amp = 0.3 + (point.iter / config.maxIter) * 0.6;
-
-          // i1 start dur pitch amp pan
-          score += `i1 ${time.toFixed(3)} ${duration.toFixed(3)} ${pitch} ${amp.toFixed(3)} ${pan.toFixed(3)}\n`;
-
-          // Stagger notes based on position
-          time += 0.05;
-        });
-
-        score += "\ne\n";
-
-        // Orchestra header suggestion
-        const orchestra = `; Suggested Csound Orchestra
-<CsoundSynthesizer>
-<CsOptions>
--odac -d
-</CsOptions>
-<CsInstruments>
-
-sr = 44100
-ksmps = 32
-nchnls = 2
-0dbfs = 1
-
-instr 1
-  ; p4 = MIDI note
-  ; p5 = amplitude
-  ; p6 = pan (0-1)
-  
-  iFreq = cpsmidinn(p4)
-  iAmp = p5
-  iPan = p6
-  
-  ; Simple tone with envelope
-  kEnv = linsegr:k(0, 0.01, 1, 0.1, 0.7, 0.1, 0)
-  aSig = oscili:a(iAmp * kEnv, iFreq)
-  
-  ; Stereo pan
-  aL = aSig * sqrt(1 - iPan)
-  aR = aSig * sqrt(iPan)
-  
-  out(aL, aR)
-endin
-
-</CsInstruments>
-<CsScore>
-
-${score}
-
-</CsScore>
-</CsoundSynthesizer>`;
-
-        document.getElementById("csoundOutput").value = orchestra;
-      }
-
-      // Start
-      init();
-    </script>
+    </section>
+
+    <section class="specs">
+      <div class="container">
+        <h2>Technical Specifications</h2>
+        <div class="spec-list">
+          <div class="spec-item">
+            <strong>Audio Engine</strong>
+            Csound WASM 7.0.0-beta26 with functional syntax
+          </div>
+          <div class="spec-item">
+            <strong>Sample Rate</strong>
+            44.1 kHz, 32 samples per k-cycle
+          </div>
+          <div class="spec-item">
+            <strong>Synthesis Types</strong>
+            11 unique synthesis algorithms
+          </div>
+          <div class="spec-item">
+            <strong>Effects</strong>
+            4 global effects buses (Reverb, Echo, Chorus, Flanger)
+          </div>
+          <div class="spec-item">
+            <strong>Scales</strong>
+            20 scale types including 12-TET and microtonal systems
+          </div>
+          <div class="spec-item">
+            <strong>Rhythms</strong>
+            25 rhythmic quantization options
+          </div>
+          <div class="spec-item">
+            <strong>Fractal Types</strong>
+            Mandelbrot Set and Julia Set with infinite zoom
+          </div>
+          <div class="spec-item">
+            <strong>Rendering</strong>
+            CPU Canvas 2D and GPU WebGL modes
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="docs-section">
+      <div class="container">
+        <h2>Documentation</h2>
+        <div class="docs-grid">
+          <a href="quickstart.html" class="doc-card">
+            <div class="doc-icon">🚀</div>
+            <h3>Quick Start</h3>
+            <p>Get up and running in 5 minutes</p>
+          </a>
+
+          <a href="users-guide.html" class="doc-card">
+            <div class="doc-icon">📚</div>
+            <h3>User's Guide</h3>
+            <p>Complete feature documentation</p>
+          </a>
+
+          <a href="technical-guide.html" class="doc-card">
+            <div class="doc-icon">⚙️</div>
+            <h3>Technical Guide</h3>
+            <p>Code architecture and implementation</p>
+          </a>
+
+          <a href="app-v2.1.html" class="doc-card">
+            <div class="doc-icon">🎵</div>
+            <h3>Launch App</h3>
+            <p>Start exploring now</p>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <footer>
+      <div class="container">
+        <p>&copy; 2024 Dr.C - Mandelbrot Explorer</p>
+        <p style="margin-top: 10px">
+          Powered by Csound WASM | Created with ♥ for fractal sound design
+        </p>
+      </div>
+    </footer>
   </body>
 </html>

@@ -1,0 +1,558 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Quick Start Guide - Dr.C Mandelbrot Explorer</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      :root {
+        --bg: #0a0e14;
+        --bg-light: #151a21;
+        --text: #e6e6e6;
+        --text-dim: #8a9199;
+        --accent: #00ff88;
+        --accent-dim: rgba(0, 255, 136, 0.2);
+        --border: #2a3039;
+        --warning: #ffaa00;
+      }
+
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu,
+          Cantarell, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        line-height: 1.8;
+      }
+
+      .container {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 40px 20px;
+      }
+
+      header {
+        text-align: center;
+        margin-bottom: 60px;
+        padding-bottom: 30px;
+        border-bottom: 2px solid var(--accent);
+      }
+
+      h1 {
+        font-size: 3em;
+        margin-bottom: 10px;
+        color: var(--accent);
+      }
+
+      .subtitle {
+        font-size: 1.2em;
+        color: var(--text-dim);
+      }
+
+      .nav-links {
+        display: flex;
+        gap: 15px;
+        justify-content: center;
+        margin-top: 20px;
+        flex-wrap: wrap;
+      }
+
+      .nav-links a {
+        color: var(--accent);
+        text-decoration: none;
+        padding: 8px 16px;
+        border: 1px solid var(--accent);
+        border-radius: 5px;
+        transition: all 0.3s;
+      }
+
+      .nav-links a:hover {
+        background: var(--accent-dim);
+      }
+
+      h2 {
+        font-size: 2em;
+        margin: 40px 0 20px;
+        color: var(--accent);
+        border-left: 4px solid var(--accent);
+        padding-left: 15px;
+      }
+
+      h3 {
+        font-size: 1.5em;
+        margin: 30px 0 15px;
+        color: var(--accent);
+      }
+
+      p {
+        margin-bottom: 15px;
+        color: var(--text);
+      }
+
+      ul,
+      ol {
+        margin-left: 30px;
+        margin-bottom: 20px;
+      }
+
+      li {
+        margin-bottom: 10px;
+      }
+
+      code {
+        background: var(--bg-light);
+        padding: 2px 8px;
+        border-radius: 3px;
+        color: var(--accent);
+        font-family: "Monaco", "Courier New", monospace;
+      }
+
+      .step {
+        background: var(--bg-light);
+        padding: 25px;
+        border-radius: 8px;
+        margin-bottom: 25px;
+        border-left: 4px solid var(--accent);
+      }
+
+      .step-number {
+        display: inline-block;
+        background: var(--accent);
+        color: var(--bg);
+        width: 35px;
+        height: 35px;
+        line-height: 35px;
+        text-align: center;
+        border-radius: 50%;
+        font-weight: bold;
+        margin-right: 15px;
+        font-size: 1.2em;
+      }
+
+      .step-title {
+        font-size: 1.3em;
+        font-weight: 600;
+        margin-bottom: 10px;
+        color: var(--accent);
+      }
+
+      .tip {
+        background: rgba(0, 255, 136, 0.1);
+        border-left: 4px solid var(--accent);
+        padding: 15px;
+        margin: 20px 0;
+        border-radius: 5px;
+      }
+
+      .tip strong {
+        color: var(--accent);
+      }
+
+      .warning {
+        background: rgba(255, 170, 0, 0.1);
+        border-left: 4px solid var(--warning);
+        padding: 15px;
+        margin: 20px 0;
+        border-radius: 5px;
+      }
+
+      .warning strong {
+        color: var(--warning);
+      }
+
+      .keyboard-shortcut {
+        display: inline-block;
+        background: var(--bg-light);
+        border: 1px solid var(--border);
+        border-radius: 3px;
+        padding: 3px 8px;
+        font-family: monospace;
+        color: var(--accent);
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 20px;
+        margin: 20px 0;
+      }
+
+      .grid-item {
+        background: var(--bg-light);
+        padding: 15px;
+        border-radius: 5px;
+        border: 1px solid var(--border);
+      }
+
+      .grid-item h4 {
+        color: var(--accent);
+        margin-bottom: 10px;
+      }
+
+      footer {
+        margin-top: 80px;
+        padding-top: 30px;
+        border-top: 1px solid var(--border);
+        text-align: center;
+        color: var(--text-dim);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <h1>🚀 Quick Start Guide</h1>
+        <p class="subtitle">Dr.C - Mandelbrot Explorer</p>
+        <div class="nav-links">
+          <a href="index.html">← Home</a>
+          <a href="app-v2.1.html">Launch App</a>
+          <a href="users-guide.html">User's Guide →</a>
+        </div>
+      </header>
+
+      <main>
+        <p style="font-size: 1.2em; color: var(--text-dim)">
+          Get started with fractal sound design in just 5 minutes. This guide
+          will have you creating sonic landscapes from mathematical beauty in no
+          time.
+        </p>
+
+        <h2>Getting Started</h2>
+
+        <div class="step">
+          <div class="step-title">
+            <span class="step-number">1</span>
+            Launch the Application
+          </div>
+          <p>
+            Open <code>app-v2.1.html</code> in a modern web browser (Chrome,
+            Firefox, Safari, or Edge). The application loads entirely in your
+            browser - no installation required.
+          </p>
+          <p>
+            <strong>Wait for initialization:</strong> You'll see "Csound
+            initializing..." in the Audio Control section. After a few seconds,
+            it will change to "Csound WASM ready!"
+          </p>
+        </div>
+
+        <div class="step">
+          <div class="step-title">
+            <span class="step-number">2</span>
+            Start Audio
+          </div>
+          <p>
+            Click the <strong>▶ Play Audio</strong> button at the top of the
+            left column. The button will change to
+            <strong>⏸ Stop Audio</strong>
+            and you'll hear the fractal being sonified in real-time.
+          </p>
+          <div class="tip">
+            <strong>💡 Tip:</strong> You can toggle audio on/off at any time by
+            pressing <span class="keyboard-shortcut">Spacebar</span> or clicking
+            the button.
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-title">
+            <span class="step-number">3</span>
+            Explore Factory Presets
+          </div>
+          <p>
+            The easiest way to experience the full range of sounds is to load
+            factory presets:
+          </p>
+          <ol>
+            <li>
+              Find the <strong>Presets</strong> section in the left column
+            </li>
+            <li>
+              Click the <strong>Saved Presets</strong> dropdown - you'll see 45
+              factory presets
+            </li>
+            <li>
+              Select a preset (try "FM Bell: Shimmer" or "Pluck: Ambient
+              Sparkle")
+            </li>
+            <li>Click <strong>📂 Load</strong></li>
+          </ol>
+          <p>
+            The fractal visualization and all audio parameters will instantly
+            update to match the preset.
+          </p>
+        </div>
+
+        <div class="step">
+          <div class="step-title">
+            <span class="step-number">4</span>
+            Interact with the Fractal
+          </div>
+          <p>The fractal responds to mouse/trackpad interaction:</p>
+          <ul>
+            <li>
+              <strong>Click</strong> on the fractal to zoom in (Mandelbrot) or
+              morph the Julia parameter
+            </li>
+            <li>
+              <strong>Mousewheel/Trackpad scroll</strong> to zoom in/out
+              smoothly
+            </li>
+            <li>
+              <strong>Zoom buttons</strong> in the left panel for precise
+              control
+            </li>
+            <li>
+              <strong>Reset View</strong> button returns to the starting
+              position
+            </li>
+          </ul>
+          <div class="tip">
+            <strong>💡 Listen:</strong> As you zoom and move around the fractal,
+            the audio changes in real-time because different fractal regions
+            trigger different notes and parameters!
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-title">
+            <span class="step-number">5</span>
+            Experiment with Settings
+          </div>
+          <p>Try changing these key parameters to shape your sound:</p>
+          <div class="grid">
+            <div class="grid-item">
+              <h4>Synthesis Type</h4>
+              <p>
+                Choose from 11 algorithms: Pluck, FM Bell, Additive, Organ,
+                Granular, and more
+              </p>
+            </div>
+            <div class="grid-item">
+              <h4>Key & Scale</h4>
+              <p>
+                Set a musical key (C, D, E, etc.) and scale (Major, Minor,
+                Pentatonic, Blues)
+              </p>
+            </div>
+            <div class="grid-item">
+              <h4>Rhythm</h4>
+              <p>
+                Quantize durations to musical note values (Quarters, Eighths,
+                Triplets)
+              </p>
+            </div>
+            <div class="grid-item">
+              <h4>Effects</h4>
+              <p>
+                Add Reverb, Echo, Chorus, or Flanger to create space and depth
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-title">
+            <span class="step-number">6</span>
+            Randomize for Discovery
+          </div>
+          <p>
+            Want instant sonic exploration? Click the
+            <strong>🎲 Randomize All</strong> button in the left column.
+          </p>
+          <p>This randomizes:</p>
+          <ul>
+            <li>Synthesis algorithm</li>
+            <li>Musical key and scale</li>
+            <li>Rhythmic quantization</li>
+            <li>Tempo and pitch range</li>
+            <li>All effects settings</li>
+            <li>Parameter mappings</li>
+          </ul>
+          <p>
+            <strong>Keep clicking</strong> until you find something you love,
+            then save it as a preset!
+          </p>
+        </div>
+
+        <h2>5-Minute Workflow Example</h2>
+
+        <div class="step">
+          <p><strong>Create a Beautiful Soundscape:</strong></p>
+          <ol>
+            <li>Click <strong>▶ Play Audio</strong></li>
+            <li>
+              Select preset: <strong>"Granular: Cloud Texture"</strong> from the
+              dropdown
+            </li>
+            <li>Click <strong>📂 Load</strong></li>
+            <li>Watch the Julia set animate while ethereal textures emerge</li>
+            <li>Use mousewheel to zoom slowly into the fractal</li>
+            <li>
+              Increase <strong>Reverb Mix</strong> to 85% for more spaciousness
+            </li>
+            <li>Type a name in the preset field: "My Cloud Dream"</li>
+            <li>Click <strong>💾 Save</strong> to keep your creation</li>
+          </ol>
+        </div>
+
+        <h2>Essential Controls Reference</h2>
+
+        <div class="grid">
+          <div class="grid-item">
+            <h4>Left Column</h4>
+            <ul style="margin-left: 20px; font-size: 0.95em">
+              <li>Audio Control (Play/Stop)</li>
+              <li>Randomize All</li>
+              <li>Presets (Save/Load)</li>
+              <li>Fractal Mode</li>
+              <li>Zoom Controls</li>
+              <li>Color Schemes</li>
+              <li>Animation Controls</li>
+            </ul>
+          </div>
+
+          <div class="grid-item">
+            <h4>Right Column</h4>
+            <ul style="margin-left: 20px; font-size: 0.95em">
+              <li>Synthesis Type</li>
+              <li>Quantize (Key/Scale/Rhythm)</li>
+              <li>Master Volume</li>
+              <li>Envelope (Attack/Release)</li>
+              <li>Global Effects</li>
+              <li>Musical Parameters</li>
+              <li>Parameter Mapping</li>
+            </ul>
+          </div>
+        </div>
+
+        <h2>Keyboard Shortcuts</h2>
+
+        <ul>
+          <li>
+            <span class="keyboard-shortcut">Spacebar</span> - Toggle audio
+            on/off
+          </li>
+        </ul>
+
+        <h2>Tips for Best Results</h2>
+
+        <div class="tip">
+          <strong>💡 Start with Presets:</strong> The 45 factory presets are
+          professionally designed to sound great. Use them as starting points
+          for your own explorations.
+        </div>
+
+        <div class="tip">
+          <strong>💡 Experiment with Scales:</strong> Try different combinations
+          of Key + Scale. C# Pentatonic Major, E Phrygian, and A Minor all have
+          unique flavors.
+        </div>
+
+        <div class="tip">
+          <strong>💡 Layer Effects:</strong> Reverb creates space, Echo adds
+          rhythmic interest, Chorus thickens the sound, and Flanger adds
+          movement.
+        </div>
+
+        <div class="tip">
+          <strong>💡 Zoom Slowly:</strong> The most interesting sounds often
+          emerge when you zoom gradually into the fractal, revealing new
+          boundary regions.
+        </div>
+
+        <div class="warning">
+          <strong>⚠️ Volume Warning:</strong> Some randomized settings or
+          presets can be loud. Start with Master Volume at 50% and adjust as
+          needed.
+        </div>
+
+        <h2>Next Steps</h2>
+
+        <p>Once you're comfortable with the basics, dive deeper:</p>
+
+        <ul>
+          <li>
+            <strong><a href="users-guide.html">User's Guide</a></strong> - Learn
+            about all features, parameter mappings, and advanced techniques
+          </li>
+          <li>
+            <strong><a href="technical-guide.html">Technical Guide</a></strong>
+            - Understand the code architecture and Csound implementation
+          </li>
+          <li>
+            <strong>Create Custom Mappings</strong> - Map fractal parameters to
+            different synthesis targets for unique sonic results
+          </li>
+          <li>
+            <strong>Build a Preset Library</strong> - Save your favorite
+            discoveries and build your personal sound palette
+          </li>
+        </ul>
+
+        <h2>Troubleshooting</h2>
+
+        <div class="grid-item">
+          <h4>No Sound?</h4>
+          <ul style="margin-left: 20px">
+            <li>Check that audio is playing (button shows "⏸ Stop Audio")</li>
+            <li>Verify Master Volume is above 0%</li>
+            <li>Make sure your system volume is up</li>
+            <li>Try refreshing the page and restarting audio</li>
+          </ul>
+        </div>
+
+        <div class="grid-item">
+          <h4>Csound Won't Initialize?</h4>
+          <ul style="margin-left: 20px">
+            <li>
+              Make sure you're using a modern browser (Chrome, Firefox, Safari,
+              Edge)
+            </li>
+            <li>Check browser console (F12) for error messages</li>
+            <li>Try a hard refresh: Ctrl+Shift+R (Cmd+Shift+R on Mac)</li>
+          </ul>
+        </div>
+
+        <div class="grid-item">
+          <h4>Presets Not Loading?</h4>
+          <ul style="margin-left: 20px">
+            <li>Refresh the page - factory presets load automatically</li>
+            <li>Check browser console for localStorage errors</li>
+            <li>
+              Try clearing browser cache and reloading (factory presets will
+              regenerate)
+            </li>
+          </ul>
+        </div>
+      </main>
+
+      <footer>
+        <p>&copy; 2024 Dr.C - Mandelbrot Explorer | Quick Start Guide</p>
+        <div style="margin-top: 15px">
+          <a
+            href="index.html"
+            style="color: var(--accent); text-decoration: none; margin: 0 10px"
+            >Home</a
+          >
+          <a
+            href="users-guide.html"
+            style="color: var(--accent); text-decoration: none; margin: 0 10px"
+            >User's Guide</a
+          >
+          <a
+            href="technical-guide.html"
+            style="color: var(--accent); text-decoration: none; margin: 0 10px"
+            >Technical Guide</a
+          >
+        </div>
+      </footer>
+    </div>
+  </body>
+</html>
