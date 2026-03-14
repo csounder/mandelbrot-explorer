@@ -1340,7 +1340,7 @@ instr 5
   out(aL * kMasterVol, aR * kMasterVol)
 endin
 
-; Instrument 6: Granular
+; Instrument 6: Granular (using phasor-based granular)
 instr 6
   iFreq = p4
   iAmp = p5
@@ -1353,10 +1353,13 @@ instr 6
   kReverbMix chnget "reverbMix"
   
   kEnv = linsegr:k(0, iAtk, iAmp, iRel, 0)
-  kDens = 10 + iBright * 40
-  kGrainSize = 0.01 + iBright * 0.05
-  aSig = grain3:a(iFreq, 0, 1, 0, kGrainSize, kDens, 100, -1, -1, 0)
-  aSig = aSig * kEnv * 0.3
+  
+  ; Granular using overlapping windowed sine grains
+  kGrainRate = 20 + iBright * 80
+  aGrainEnv = oscil:a(1, kGrainRate, -1)
+  aGrainEnv = abs(aGrainEnv)
+  aSig = oscili:a(kEnv * aGrainEnv, iFreq * (1 + randc:k(iBright * 0.1, kGrainRate)), -1)
+  aSig = aSig * 0.3
   
   aL, aR = pan2(aSig, iPan)
   gaReverb = gaReverb + (aL + aR) * 0.5 * kReverbMix
@@ -1417,13 +1420,21 @@ endin
 `;
 
           console.log("Compiling orchestra...");
-          await csound.compileOrc(orchestra);
-          console.log("Orchestra compiled successfully");
 
-          // Compile ftable for gbuzz
-          console.log("Creating function table for gbuzz...");
-          await csound.evalCode("f1 0 16384 10 1");
-          console.log("Function table created");
+          // Create complete CSD with ftable and orchestra
+          const csd = `
+<CsoundSynthesizer>
+<CsInstruments>
+${orchestra}
+</CsInstruments>
+<CsScore>
+f1 0 16384 10 1
+</CsScore>
+</CsoundSynthesizer>
+`;
+
+          await csound.compileCsd(csd);
+          console.log("Orchestra and ftables compiled successfully");
 
           console.log("Setting audio output option...");
           await csound.setOption("-odac");
