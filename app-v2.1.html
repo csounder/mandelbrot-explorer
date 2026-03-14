@@ -1696,8 +1696,8 @@
           <!-- Export -->
           <div class="control-section">
             <h3>Export</h3>
-            <button class="btn" onclick="generateCsound()">
-              Generate .CSD File
+            <button class="btn" id="generateCsdBtn" onclick="generateCsound()">
+              🔴 Start CSD Recording
             </button>
           </div>
         </div>
@@ -3630,6 +3630,9 @@ The fractal maps to sound:
           return;
         }
 
+        // Finalize CSD recording if active (preset change ends the recording)
+        stopCSDRecording();
+
         const presets = JSON.parse(
           localStorage.getItem("mandelbrotPresets") || "{}",
         );
@@ -4326,6 +4329,9 @@ The fractal maps to sound:
           scheduledTimeouts.forEach((id) => clearTimeout(id));
           scheduledTimeouts = [];
 
+          // Finalize CSD recording if active
+          stopCSDRecording();
+
           updateStatus("Audio stopped", "success");
         }
       };
@@ -4766,6 +4772,9 @@ The fractal maps to sound:
               if (audioPlaying && csound && csoundReady) {
                 csound.inputMessage(scoreEvent);
 
+                // Add note to CSD recording if active
+                addNoteToCSD(time, dur, freq, amp, pan, brightness);
+
                 // Apply effect parameter mappings
                 const applyEffectMapping = (
                   source,
@@ -5008,6 +5017,9 @@ The fractal maps to sound:
       };
 
       window.loadPreset = function (name) {
+        // Finalize CSD recording if active (preset change ends the recording)
+        stopCSDRecording();
+
         switch (name) {
           case "mandelbrot":
             config.mode = "mandelbrot";
@@ -5194,8 +5206,12 @@ The fractal maps to sound:
       }
 
       // ============================================================================
-      // EXPORT
+      // EXPORT - CSD Generation with Live Score Recording
       // ============================================================================
+
+      let csdRecording = false;
+      let csdScoreNotes = [];
+      let csdStartTime = 0;
 
       window.generateCsound = function () {
         if (fractalData.length === 0) {
@@ -5203,100 +5219,144 @@ The fractal maps to sound:
           return;
         }
 
-        let score =
-          "; Csound Score Generated from " + config.mode.toUpperCase() + "\n";
-        score +=
-          "; Center: " +
-          config.centerX.toFixed(4) +
-          " + " +
-          config.centerY.toFixed(4) +
-          "i\n";
-        score += "; Zoom: " + config.zoom.toFixed(2) + "x\n";
-        score += "; Generated: " + new Date().toISOString() + "\n\n";
+        const btn = document.getElementById("generateCsdBtn");
 
-        // Sort and filter
-        const sorted = [...fractalData].sort((a, b) => a.iter - b.iter);
-        const escaped = sorted.filter((d) => d.iter < config.maxIter);
-        const subset = escaped.slice(0, Math.min(200, escaped.length));
+        if (!csdRecording) {
+          // Start new CSD recording
+          csdRecording = true;
+          csdScoreNotes = [];
+          csdStartTime = Date.now();
 
-        let time = 0;
+          const header = `; Dr.C - Mandelbrot Explorer - Live Recording
+; Mode: ${config.mode.toUpperCase()}
+; Center: ${config.centerX.toFixed(4)} + ${config.centerY.toFixed(4)}i
+; Zoom: ${config.zoom.toFixed(2)}x
+; Started: ${new Date().toISOString()}
 
-        subset.forEach((point) => {
-          const pitch = 36 + Math.floor((point.iter / config.maxIter) * 48);
-          const freq = 440 * Math.pow(2, (pitch - 69) / 12);
-          const pan = point.x / canvas2D.width;
-          const duration = 0.5 + (1 - point.y / canvas2D.height) * 2;
-          const amp = 0.3 + (point.iter / config.maxIter) * 0.6;
-          const brightness = Math.min(1, point.iter / config.maxIter);
+<CsoundSynthesizer>
+<CsOptions>
+-odac -d
+</CsOptions>
+<CsInstruments>
 
-          score += `i 1 ${time.toFixed(3)} ${duration.toFixed(3)} ${freq.toFixed(2)} ${amp.toFixed(3)} ${pan.toFixed(3)} ${brightness.toFixed(3)}\n`;
-          time += 0.05;
-        });
+sr = 44100
+ksmps = 32
+nchnls = 2
+0dbfs = 1
 
-        score += "\ne\n";
+gaReverb init 0
 
-        const orchestra = `; Dr.C - Mandelbrot Explorer - Generated Composition
-      <CsoundSynthesizer>
-      <CsOptions>
-      -odac -d
-      </CsOptions>
-      <CsInstruments>
+instr 1
+  ; p4 = frequency (Hz)
+  ; p5 = amplitude
+  ; p6 = pan (0-1)
+  ; p7 = brightness (0-1)
 
-      sr = 44100
-      ksmps = 32
-      nchnls = 2
-      0dbfs = 1
+  iFreq = p4
+  iAmp = p5
+  iPan = p6
+  iBright = p7
 
-      gaReverb init 0
+  kEnv = linsegr:k(0, 0.01, 1, 0.1, 0.8, 0.05, 0)
 
-      instr 1
-        ; p4 = frequency (Hz)
-        ; p5 = amplitude
-        ; p6 = pan (0-1)
-        ; p7 = brightness (0-1)
+  iHarms = 1 + iBright * 8
+  aSig = gbuzz:a(iAmp * kEnv, iFreq, iHarms, 1, 0.9, -1)
 
-        iFreq = p4
-        iAmp = p5
-        iPan = p6
-        iBright = p7
+  kCutoff = iFreq * (2 + iBright * 4)
+  aSig = moogladder:a(aSig, kCutoff, 0.3)
 
-        kEnv = linsegr:k(0, 0.01, 1, 0.1, 0.8, 0.05, 0)
+  aL = aSig * sqrt(1 - iPan)
+  aR = aSig * sqrt(iPan)
 
-        iHarms = 1 + iBright * 8
-        aSig = gbuzz:a(iAmp * kEnv, iFreq, iHarms, 1, 0.9, -1)
+  gaReverb = gaReverb + (aL + aR) * 0.5 * 0.3
 
-        kCutoff = iFreq * (2 + iBright * 4)
-        aSig = moogladder:a(aSig, kCutoff, 0.3)
+  out(aL * 0.7, aR * 0.7)
+endin
 
-        aL = aSig * sqrt(1 - iPan)
-        aR = aSig * sqrt(iPan)
+instr 999
+  aL, aR freeverb gaReverb, gaReverb, 0.85, 0.7
+  out(aL * 0.7, aR * 0.7)
+  gaReverb = 0
+endin
 
-        gaReverb = gaReverb + (aL + aR) * 0.5 * 0.3
+</CsInstruments>
+<CsScore>
 
-        out(aL * 0.7, aR * 0.7)
-      endin
+f1 0 16384 10 1
 
-      instr 999
-        aL, aR freeverb gaReverb, gaReverb, 0.85, 0.7
-        out(aL * 0.7, aR * 0.7)
-        gaReverb = 0
-      endin
+; --- SCORE EVENTS (recording in progress...) ---
+`;
 
-      f1 0 16384 10 1
-
-      </CsInstruments>
-      <CsScore>
-
-      ${score}
-
-      i 999 0 [${time} + 5]
-
-      </CsScore>
-      </CsoundSynthesizer>`;
-
-        document.getElementById("csoundOutput").value = orchestra;
-        updateStatus("Csound .csd file generated!", "success");
+          document.getElementById("csoundOutput").value = header;
+          btn.textContent = "⏹ Stop CSD Recording";
+          updateStatus(
+            "CSD recording started - notes will appear as you play!",
+            "success",
+          );
+        } else {
+          // Stop recording and close the score
+          finalizeCSD();
+          btn.textContent = "🔴 Start CSD Recording";
+        }
       };
+
+      // Function to add a note to the live CSD recording
+      function addNoteToCSD(time, duration, freq, amp, pan, brightness) {
+        if (!csdRecording) return;
+
+        const noteEvent = `i 1 ${time.toFixed(3)} ${duration.toFixed(3)} ${freq.toFixed(2)} ${amp.toFixed(3)} ${pan.toFixed(3)} ${brightness.toFixed(3)}\n`;
+        csdScoreNotes.push(noteEvent);
+
+        // Update the textarea to show accumulating notes
+        const currentText = document.getElementById("csoundOutput").value;
+        const textarea = document.getElementById("csoundOutput");
+        textarea.value = currentText + noteEvent;
+
+        // Auto-scroll to bottom
+        textarea.scrollTop = textarea.scrollHeight;
+      }
+
+      // Function to finalize and close the CSD
+      function finalizeCSD() {
+        if (!csdRecording) return;
+
+        csdRecording = false;
+
+        const elapsedSeconds = (Date.now() - csdStartTime) / 1000;
+        const reverbDuration = Math.max(5, elapsedSeconds + 5);
+
+        const footer = `
+; --- END OF SCORE ---
+
+e
+
+i 999 0 ${reverbDuration.toFixed(1)}
+
+</CsScore>
+</CsoundSynthesizer>
+
+; Total duration: ${elapsedSeconds.toFixed(1)} seconds
+; Total notes: ${csdScoreNotes.length}
+; Generated: ${new Date().toISOString()}
+`;
+
+        const currentText = document.getElementById("csoundOutput").value;
+        document.getElementById("csoundOutput").value = currentText + footer;
+
+        updateStatus(
+          `CSD recording complete! ${csdScoreNotes.length} notes captured.`,
+          "success",
+        );
+      }
+
+      // Auto-finalize CSD when audio stops or preset loads
+      function stopCSDRecording() {
+        if (csdRecording) {
+          finalizeCSD();
+          document.getElementById("generateCsdBtn").textContent =
+            "🔴 Start CSD Recording";
+        }
+      }
 
       window.downloadImage = function () {
         const link = document.createElement("a");
