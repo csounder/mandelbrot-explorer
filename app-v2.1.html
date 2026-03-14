@@ -5231,6 +5231,7 @@ The fractal maps to sound:
       // ============================================================================
 
       let csdRecording = false;
+      let csdRecordingStartTime = 0; // Track when recording started for accurate timestamps
 
       window.generateCsound = function () {
         if (fractalData.length === 0) {
@@ -5244,6 +5245,7 @@ The fractal maps to sound:
           // Start new CSD recording
           console.log("Starting new CSD recording");
           csdRecording = true;
+          csdRecordingStartTime = Date.now(); // Record start timestamp
 
           // Get current synthesis settings
           const synthType = document.getElementById("synthType").value;
@@ -5840,10 +5842,16 @@ endin
         angle,
         instrNum,
       ) {
-        if (!csdRecording) return;
+        if (!csdRecording) {
+          // Silently skip if not recording
+          return;
+        }
 
-        // Format the note event exactly as it's sent to Csound
-        const noteEvent = `i ${instrNum} ${time.toFixed(3)} ${duration.toFixed(3)} ${freq.toFixed(2)} ${amp.toFixed(3)} ${pan.toFixed(3)} ${brightness.toFixed(3)} ${attack} ${release} ${smoothness.toFixed(3)} ${angle.toFixed(3)}\n`;
+        // Calculate ACTUAL elapsed time since recording started
+        const elapsedSeconds = (Date.now() - csdRecordingStartTime) / 1000;
+
+        // Format the note event with REAL timestamp
+        const noteEvent = `i ${instrNum} ${elapsedSeconds.toFixed(3)} ${duration.toFixed(3)} ${freq.toFixed(2)} ${amp.toFixed(3)} ${pan.toFixed(3)} ${brightness.toFixed(3)} ${attack} ${release} ${smoothness.toFixed(3)} ${angle.toFixed(3)}\n`;
 
         // Simply append to textarea - no arrays, no reconstruction needed
         const textarea = document.getElementById("csoundOutput");
