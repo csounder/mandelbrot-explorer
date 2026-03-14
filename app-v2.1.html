@@ -5294,7 +5294,7 @@ nchnls = 2
 0dbfs = 1
 
 ; Initialize control channels with current settings
-chnset ${(parseFloat(document.getElementById("masterVol").value) / 100).toFixed(2)}, "masterVol"
+chnset ${(parseFloat(document.getElementById("masterVolume").value) / 100).toFixed(2)}, "masterVol"
 chnset ${(parseFloat(document.getElementById("reverbMix").value) / 100).toFixed(2)}, "reverbMix"
 chnset ${parseFloat(document.getElementById("echoTime").value).toFixed(2)}, "echoTime"
 chnset ${(parseFloat(document.getElementById("echoFeedback").value) / 100).toFixed(2)}, "echoFeedback"
