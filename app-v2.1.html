@@ -5293,6 +5293,20 @@ ksmps = 32
 nchnls = 2
 0dbfs = 1
 
+; Initialize control channels with current settings
+chnset ${(parseFloat(document.getElementById("masterVol").value) / 100).toFixed(2)}, "masterVol"
+chnset ${(parseFloat(document.getElementById("reverbMix").value) / 100).toFixed(2)}, "reverbMix"
+chnset ${parseFloat(document.getElementById("echoTime").value).toFixed(2)}, "echoTime"
+chnset ${(parseFloat(document.getElementById("echoFeedback").value) / 100).toFixed(2)}, "echoFeedback"
+chnset ${(parseFloat(document.getElementById("echoMix").value) / 100).toFixed(2)}, "echoMix"
+chnset ${parseFloat(document.getElementById("chorusRate").value).toFixed(2)}, "chorusRate"
+chnset ${parseFloat(document.getElementById("chorusDepth").value).toFixed(2)}, "chorusDepth"
+chnset ${(parseFloat(document.getElementById("chorusMix").value) / 100).toFixed(2)}, "chorusMix"
+chnset ${parseFloat(document.getElementById("flangerRate").value).toFixed(2)}, "flangerRate"
+chnset ${parseFloat(document.getElementById("flangerDepth").value).toFixed(2)}, "flangerDepth"
+chnset ${(parseFloat(document.getElementById("flangerFeedback").value) / 100).toFixed(2)}, "flangerFeedback"
+chnset ${(parseFloat(document.getElementById("flangerMix").value) / 100).toFixed(2)}, "flangerMix"
+
 ; Global audio buses
 gaReverb init 0
 gaEcho init 0
@@ -5418,8 +5432,14 @@ f1 0 16384 10 1  ; Sine wave for oscillators
               downloadCsd();
             }
           } else {
-            // Add closing tags
+            // Add effect instruments and closing tags
             const closingTags = `
+; Start global effect processors (run for entire duration)
+i 998 0 3600  ; Echo
+i 997 0 3600  ; Chorus
+i 996 0 3600  ; Flanger
+i 999 0 3600  ; Reverb (master, always last)
+
 e
 
 </CsScore>
