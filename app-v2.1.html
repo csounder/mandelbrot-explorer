@@ -5231,9 +5231,6 @@ The fractal maps to sound:
       // ============================================================================
 
       let csdRecording = false;
-      let csdScoreNotes = [];
-      let csdStartTime = 0;
-      let csdHeader = ""; // Store the header separately
 
       window.generateCsound = function () {
         if (fractalData.length === 0) {
@@ -5392,9 +5389,7 @@ f1 0 16384 10 1  ; Sine wave for oscillators
 ; --- SCORE EVENTS (recording in progress...) ---
 `;
 
-          // Store header for later reconstruction
-          csdHeader = header;
-
+          // Write complete orchestra immediately
           document.getElementById("csoundOutput").value = header;
           btn.textContent = "⏹ Stop CSD Recording";
 
@@ -5402,14 +5397,46 @@ f1 0 16384 10 1  ; Sine wave for oscillators
           document.getElementById("downloadCsdBtn").disabled = true;
 
           updateStatus(
-            "CSD recording started - notes will appear as you play!",
+            "CSD recording started - play audio to add notes!",
             "success",
           );
         } else {
-          // Stop recording and close the score
-          console.log("Stop button clicked, calling finalizeCSD");
-          finalizeCSD();
-          btn.textContent = "🔴 Start CSD Recording";
+          // Stop recording - add closing tags and offer save
+          console.log("Stop button clicked - finalizing CSD");
+          const textarea = document.getElementById("csoundOutput");
+          const currentContent = textarea.value;
+
+          // Check if already closed
+          if (currentContent.includes("</CsoundSynthesizer>")) {
+            console.log("Already finalized");
+            // Offer to save again
+            if (confirm("CSD already finalized. Download it now?")) {
+              downloadCsd();
+            }
+          } else {
+            // Add closing tags
+            const closingTags = `
+e
+
+</CsScore>
+</CsoundSynthesizer>
+
+; Recording stopped: ${new Date().toISOString()}
+`;
+            textarea.value = currentContent + closingTags;
+            console.log("Added closing tags");
+
+            // Enable download button
+            document.getElementById("downloadCsdBtn").disabled = false;
+            csdRecording = false;
+            btn.textContent = "🔴 Start CSD Recording";
+
+            // Immediately ask if user wants to save
+            updateStatus("CSD finalized!", "success");
+            if (confirm("CSD file is ready! Download it now?")) {
+              downloadCsd();
+            }
+          }
         }
       };
 
@@ -5793,147 +5820,24 @@ endin
 
         // Format the note event exactly as it's sent to Csound
         const noteEvent = `i ${instrNum} ${time.toFixed(3)} ${duration.toFixed(3)} ${freq.toFixed(2)} ${amp.toFixed(3)} ${pan.toFixed(3)} ${brightness.toFixed(3)} ${attack} ${release} ${smoothness.toFixed(3)} ${angle.toFixed(3)}\n`;
-        csdScoreNotes.push(noteEvent);
 
-        // Update the textarea to show accumulating notes (for live feedback)
-        // We append to textarea for visual feedback, but finalizeCSD rebuilds from array
+        // Simply append to textarea - no arrays, no reconstruction needed
         const textarea = document.getElementById("csoundOutput");
-        textarea.value = textarea.value + noteEvent;
+        textarea.value += noteEvent;
 
         // Auto-scroll to bottom
         textarea.scrollTop = textarea.scrollHeight;
       }
 
-      // Function to finalize and close the CSD
-      function finalizeCSD() {
-        if (!csdRecording) {
-          console.log("finalizeCSD: Not recording, skipping");
-          return;
-        }
-
-        console.log(
-          "finalizeCSD: Finalizing CSD with",
-          csdScoreNotes.length,
-          "notes",
-        );
-        csdRecording = false;
-
-        const elapsedSeconds = (Date.now() - csdStartTime) / 1000;
-        const reverbDuration = Math.max(5, elapsedSeconds + 5);
-
-        // Get effect settings for control channel initialization
-        const masterVol =
-          parseFloat(document.getElementById("masterVol").value) / 100;
-        const reverbMix =
-          parseFloat(document.getElementById("reverbMix").value) / 100;
-        const echoTime = parseFloat(document.getElementById("echoTime").value);
-        const echoFeedback =
-          parseFloat(document.getElementById("echoFeedback").value) / 100;
-        const echoMix =
-          parseFloat(document.getElementById("echoMix").value) / 100;
-        const chorusRate = parseFloat(
-          document.getElementById("chorusRate").value,
-        );
-        const chorusDepth = parseFloat(
-          document.getElementById("chorusDepth").value,
-        );
-        const chorusMix =
-          parseFloat(document.getElementById("chorusMix").value) / 100;
-        const flangerRate = parseFloat(
-          document.getElementById("flangerRate").value,
-        );
-        const flangerDepth = parseFloat(
-          document.getElementById("flangerDepth").value,
-        );
-        const flangerFeedback =
-          parseFloat(document.getElementById("flangerFeedback").value) / 100;
-        const flangerMix =
-          parseFloat(document.getElementById("flangerMix").value) / 100;
-
-        const footer = `
-; --- END OF SCORE ---
-
-; Start global effect processors
-i 998 0 ${reverbDuration.toFixed(1)}  ; Echo
-i 997 0 ${reverbDuration.toFixed(1)}  ; Chorus
-i 996 0 ${reverbDuration.toFixed(1)}  ; Flanger
-i 999 0 ${reverbDuration.toFixed(1)}  ; Reverb (always last)
-
-e
-
-</CsScore>
-</CsoundSynthesizer>
-
-; === PLAYBACK INSTRUCTIONS ===
-; 1. Save this file as "fractal.csd"
-; 2. Set control channel values before running:
-;    chnset ${masterVol.toFixed(2)}, "masterVol"
-;    chnset ${reverbMix.toFixed(2)}, "reverbMix"
-;    chnset ${echoTime.toFixed(2)}, "echoTime"
-;    chnset ${echoFeedback.toFixed(2)}, "echoFeedback"
-;    chnset ${echoMix.toFixed(2)}, "echoMix"
-;    chnset ${chorusRate.toFixed(2)}, "chorusRate"
-;    chnset ${chorusDepth.toFixed(2)}, "chorusDepth"
-;    chnset ${chorusMix.toFixed(2)}, "chorusMix"
-;    chnset ${flangerRate.toFixed(2)}, "flangerRate"
-;    chnset ${flangerDepth.toFixed(2)}, "flangerDepth"
-;    chnset ${flangerFeedback.toFixed(2)}, "flangerFeedback"
-;    chnset ${flangerMix.toFixed(2)}, "flangerMix"
-;
-; 3. Run with: csound fractal.csd
-;
-; Or use Cabbage/CsoundQt which will use default values of 0
-
-; Total duration: ${elapsedSeconds.toFixed(1)} seconds
-; Total notes: ${csdScoreNotes.length}
-; Generated: ${new Date().toISOString()}
-`;
-
-        const textarea = document.getElementById("csoundOutput");
-
-        // Check if we already finalized by checking the flag (more reliable than text search)
-        if (textarea.value.includes("</CsoundSynthesizer>")) {
-          console.log("finalizeCSD: Already finalized, skipping");
-          return;
-        }
-
-        // Rebuild the complete CSD from stored components (don't trust textarea)
-        // This prevents the "chopped notes" bug when textarea gets modified
-        const notesSection = csdScoreNotes.join("");
-        console.log(
-          "finalizeCSD: Rebuilding from",
-          csdScoreNotes.length,
-          "stored notes",
-        );
-
-        const finalCsd = csdHeader + notesSection + footer;
-        textarea.value = finalCsd;
-
-        console.log(
-          "finalizeCSD: Final CSD length:",
-          finalCsd.length,
-          "characters",
-        );
-
-        // Enable download button
-        const downloadBtn = document.getElementById("downloadCsdBtn");
-        downloadBtn.disabled = false;
-        console.log("finalizeCSD: Download button enabled");
-
-        updateStatus(
-          `CSD recording complete! ${csdScoreNotes.length} notes captured. Click Download to save.`,
-          "success",
-        );
-      }
-
-      // Auto-finalize CSD when audio stops or preset loads
+      // Auto-stop recording when audio stops or preset loads (DON'T finalize automatically)
       function stopCSDRecording() {
-        console.log("stopCSDRecording called, csdRecording =", csdRecording);
         if (csdRecording) {
-          console.log("Calling finalizeCSD from stopCSDRecording");
-          finalizeCSD();
-          document.getElementById("generateCsdBtn").textContent =
-            "🔴 Start CSD Recording";
+          console.log(
+            "Auto-stop recording (audio/preset changed) - user must click Stop to finalize",
+          );
+          // Just set flag to false so no more notes are added
+          // User must manually click "Stop CSD Recording" to finalize
+          csdRecording = false;
         }
       }
 
