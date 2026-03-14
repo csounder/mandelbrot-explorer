@@ -5390,7 +5390,13 @@ f1 0 16384 10 1  ; Sine wave for oscillators
 `;
 
           // Write complete orchestra immediately
-          document.getElementById("csoundOutput").value = header;
+          const textarea = document.getElementById("csoundOutput");
+          textarea.value = header;
+
+          console.log("Header written, length:", header.length);
+          console.log("Textarea value length:", textarea.value.length);
+          console.log("First 200 chars:", textarea.value.substring(0, 200));
+
           btn.textContent = "⏹ Stop CSD Recording";
 
           // Disable download button while recording
@@ -5857,6 +5863,12 @@ endin
 
           const csdContent = document.getElementById("csoundOutput").value;
           console.log("CSD content length:", csdContent.length);
+          console.log(
+            "First 200 chars of download:",
+            csdContent.substring(0, 200),
+          );
+          console.log("Has orchestra?", csdContent.includes("<CsInstruments>"));
+          console.log("Has score?", csdContent.includes("<CsScore>"));
 
           if (!csdContent || csdContent.length < 100) {
             console.log("CSD content too short or empty");
